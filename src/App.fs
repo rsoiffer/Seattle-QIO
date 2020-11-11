@@ -11,5 +11,5 @@ let myButton = document.querySelector(".my-button") :?> Browser.Types.HTMLButton
 
 // Register our listener
 myButton.onclick <- fun _ ->
-    count <- Quantum.add1 count
+    count <- add1 count
     myButton.innerText <- sprintf "You clicked: %i time(s)" count

@@ -1,162 +1,210 @@
 ﻿module Quantum
 
+#nowarn "25"
 
-let simplify (data: ('A * float) seq) =
-    seq {
-        for a, l in Seq.groupBy (fun (a, f) -> a) data do
-            let mySum = Seq.sumBy (fun (a, f) -> f) l
-            if abs (mySum) > 1e-6 then yield a, mySum
-    }
+open System.Numerics
 
-type QuantumState<'A when 'A: comparison>(data: ('A * float) seq) =
-    member this.Data = data |> simplify
 
-    static member Zero = QuantumState Seq.empty
+type WireID = WireID of int
 
-    static member inline (+)(q1: QuantumState<'A>, q2: QuantumState<'A>) =
-        Seq.concat [ q1.Data; q2.Data ] |> QuantumState
+type Bits = Bits of Map<WireID, bool>
 
-    static member inline (-)(q1: QuantumState<'A>, q2: QuantumState<'A>) = q1 + q2 * -1.0
+let removeAll wires (Bits bits) =
+    Seq.fold (fun b w -> Map.remove w b) bits wires
+    |> Bits
 
-    static member inline (*)(q1: QuantumState<'A>, q2: QuantumState<'B>) =
+let merge (Bits newBits) (Bits bits) =
+    newBits
+    |> Seq.fold (fun b nb -> Map.add nb.Key nb.Value b) bits
+    |> Bits
+
+let read (Bits bits) wireId = bits.[wireId]
+
+let B = Map.ofSeq >> Bits
+
+type Component = { Amplitude: Complex; State: Bits }
+let getAmplitude c = c.Amplitude
+let getBits c = c.State
+
+type Qubits = Qubits of Component list
+
+
+module QubitInternals =
+
+    let simplify (Qubits q) =
         seq {
-            for (a1, f1) in q1.Data do
-                for (a2, f2) in q2.Data do
-                    yield (a1, a2), f1 * f2
+            for b, q in Seq.groupBy getBits q do
+                let mySum =
+                    q
+                    |> Seq.map getAmplitude
+                    |> Seq.fold (+) Complex.Zero
+
+                if mySum.Magnitude > 1e-6 then yield { Amplitude = mySum; State = b }
         }
-        |> QuantumState
+        |> List.ofSeq
+        |> Qubits
 
-    static member inline (*)(q: QuantumState<'A>, mult: float) =
-        seq {
-            for (a, f) in q.Data do
-                yield a, f * mult
-        }
-        |> QuantumState
+    let make = List.ofSeq >> Qubits >> simplify
 
-    static member inline (/)(q: QuantumState<'A>, mult: float) = q * (1.0 / mult)
-
-    member this.ApplyQ(func: 'A -> QuantumState<'B>) =
-        seq {
-            for (a, f) in this.Data do
-                yield func a * f
-        }
-        |> Seq.sum
-
-    member this.Apply(func: 'A -> 'B) =
-        seq {
-            for (a, f) in this.Data do
-                yield func a, f
-        }
-        |> QuantumState
-
-let Pure a = QuantumState [ (a, 1.0) ]
+open QubitInternals
 
 
-type WireID = int
-type Bits = Map<WireID, bool>
-type Qubits = QuantumState<Bits>
+type Qubits with
 
-let Qubits (bitList: (WireID * bool) list) = Pure(Map.ofSeq bitList)
+    static member Zero = Qubits List.empty
 
-let modifyBits ins f (bits: Bits) =
-    let result =
-        List.map (fun in' -> Map.find in' bits) ins |> f
+    static member (+)(Qubits q1, Qubits q2) = Seq.concat [ q1; q2 ] |> make
 
-    let mutable bits = bits
-    for in' in ins do
-        bits <- bits.Remove in'
-    for res in result do
-        bits <- bits.Add res
-    bits
+    static member (-)(q1: Qubits, q2: Qubits) = q1 + q2 * -Complex.One
 
-let modifyQubits ins (f: bool list -> Qubits) (qubits: Qubits) =
-    qubits.ApplyQ(fun bits ->
-        let result =
-            List.map (fun in' -> Map.find in' bits) ins |> f
+    static member (*)(Qubits q, mult: Complex) =
+        q
+        |> Seq.map (fun c ->
+            { c with
+                  Amplitude = c.Amplitude * mult })
+        |> make
 
-        let mutable bits = bits
-        for in' in ins do
-            bits <- bits.Remove in'
+    static member (*)(q: Qubits, mult: float) = q * Complex(mult, 0.0)
 
-        result.Apply(fun mods ->
-            for res in mods do
-                bits <- bits.Add(res.Key, res.Value)
-            bits))
+    static member (*)(mult: Complex, q: Qubits) = q * mult
 
-let modifyQubit in' (f: bool -> Qubits) (qubits: Qubits) =
-    modifyQubits [ in' ] (function
-        | [ val' ] -> f val') qubits
+    static member (*)(mult: float, q: Qubits) = q * mult
 
-let copyBits in' outs (bits: Bits) =
-    let inVal = bits.[in']
-    let mutable bits = bits.Remove in'
-    for out' in outs do
-        bits <- bits.Add(out', inVal)
-    bits
+    static member (/)(q: Qubits, mult: Complex) = q * Complex.Reciprocal mult
 
+    static member (/)(q: Qubits, mult: float) = q * (1.0 / mult)
+
+
+module Qubits =
+
+    let Pure bits =
+        Qubits [ { Amplitude = Complex.One
+                   State = bits } ]
+
+    let Ket = B >> Pure
+
+    let magnitude (Qubits qubits) =
+        Seq.sumBy (fun c -> c.Amplitude.Magnitude ** 2.0) qubits
+
+    let postSelect wireId val' (Qubits qubits) =
+        qubits
+        |> Seq.filter (fun c -> read c.State wireId = val')
+        |> make
+
+    let prob wireId val' qubits =
+        postSelect wireId val' qubits |> magnitude
+
+    let normalize qubits = qubits / sqrt (magnitude qubits)
+
+open Qubits
 
 
 type SystemState =
     { ClassicalState: Bits
       QuantumState: Qubits }
 
-let applyQuantum f state =
+let modifyClassical f state =
     { state with
-          QuantumState = state.QuantumState.Apply f }
-
-let applyQuantumQ f state =
-    { state with
-          QuantumState = state.QuantumState.ApplyQ f }
+          ClassicalState = f state.ClassicalState }
 
 let modifyQuantum f state =
     { state with
           QuantumState = f state.QuantumState }
 
-let modifyClassical f state =
-    { state with
-          ClassicalState = f state.ClassicalState }
 
-type GateImplementation = (WireID list) * (WireID list) -> SystemState -> SystemState
 
-let qbit: GateImplementation =
-    function
-    | [ in1 ], [ out1 ] -> applyQuantum (copyBits in1 [ out1 ])
-    | _ -> failwith "wires not correct"
+module GateImplementations =
+    let bind (func: Bits -> Qubits) (Qubits q) =
+        seq {
+            for c in q do
+                yield c.Amplitude * func c.State
+        }
+        |> Seq.sum
 
-let cobit: GateImplementation =
-    function
-    | [ in1 ], [ out1; out2 ] -> applyQuantum (copyBits in1 [ out1; out2 ])
-    | _ -> failwith "wires not correct"
+    let map (func: Bits -> Bits) (Qubits q) =
+        seq {
+            for c in q do
+                yield { c with State = func c.State }
+        }
+        |> make
 
-let cbit: GateImplementation =
-    function
-    | [ in1 ], [ out1 ] -> modifyClassical (copyBits in1 [ out1 ])
-    | _ -> failwith "wires not correct"
+    let mapQuantum f = modifyQuantum (map f)
 
-let X: GateImplementation =
-    function
-    | [ in1 ], [ out1 ] -> modifyQuantum (modifyQubit in1 (fun val1 -> Qubits [ out1, not val1 ]))
-    | _ -> failwith "wires not correct"
+    let bindQuantum f = modifyQuantum (bind f)
 
-let Z: GateImplementation =
-    function
-    | [ in1 ], [ out1 ] ->
-        modifyQuantum
-            (modifyQubit in1 (fun val1 ->
-                 (Qubits [ out1, val1 ])
-                 * (if val1 then -1.0 else 1.0)))
-    | _ -> failwith "wires not correct"
+    let modifyBits ins f bits =
+        let result = List.map (read bits) ins |> f
+        bits |> removeAll ins |> merge result
 
-let H: GateImplementation =
-    function
-    | [ in1 ], [ out1 ] ->
-        modifyQuantum
-            (modifyQubit in1 (fun val1 ->
-                 (Qubits [ out1, false ]
-                  + Qubits [ out1, true ]
-                  * (if val1 then -1.0 else 1.0))
-                 / sqrt 2.0))
-    | _ -> failwith "wires not correct"
+    let modifyQubits ins f =
+        bind (fun bits ->
+            List.map (read bits) ins
+            |> f
+            |> map (fun mods -> bits |> removeAll ins |> merge mods))
+
+    let modifyQubit in' f =
+        modifyQubits [ in' ] (fun [ val' ] -> f val')
+
+    let copyBits in' outs =
+        modifyBits [ in' ] (fun [ val' ] -> outs |> Seq.map (fun out' -> out', val') |> B)
+
+    type GateImplementation = (WireID list) * (WireID list) -> SystemState -> SystemState
+
+    let qbit: GateImplementation =
+        function
+        | [ in1 ], [ out1 ] -> mapQuantum (copyBits in1 [ out1 ])
+        | _ -> failwith "wires not correct"
+
+    let cobit: GateImplementation =
+        function
+        | [ in1 ], [ out1; out2 ] -> mapQuantum (copyBits in1 [ out1; out2 ])
+        | _ -> failwith "wires not correct"
+
+    let cbit: GateImplementation =
+        function
+        | [ in1 ], [ out1 ] -> modifyClassical (copyBits in1 [ out1 ])
+        | _ -> failwith "wires not correct"
+
+    let X: GateImplementation =
+        function
+        | [ in1 ], [ out1 ] -> modifyQuantum (modifyQubit in1 (fun val1 -> Ket [ out1, not val1 ]))
+        | _ -> failwith "wires not correct"
+
+    let Z: GateImplementation =
+        function
+        | [ in1 ], [ out1 ] ->
+            modifyQuantum
+                (modifyQubit in1 (fun val1 ->
+                     (Ket [ out1, val1 ])
+                     * (if val1 then -1.0 else 1.0)))
+        | _ -> failwith "wires not correct"
+
+    let H: GateImplementation =
+        function
+        | [ in1 ], [ out1 ] ->
+            modifyQuantum
+                (modifyQubit in1 (fun val1 ->
+                     (Ket [ out1, false ]
+                      + Ket [ out1, true ]
+                      * (if val1 then -1.0 else 1.0))
+                     / sqrt 2.0))
+        | _ -> failwith "wires not correct"
+
+    let myRandom = System.Random()
+
+    let M: GateImplementation =
+        function
+        | [ in1 ], [ out1 ] ->
+            fun state ->
+                let val' =
+                    myRandom.NextDouble() < prob in1 true state.QuantumState
+
+                { ClassicalState = merge (B [ out1, val' ]) state.ClassicalState
+                  QuantumState =
+                      postSelect in1 val' state.QuantumState
+                      |> map (removeAll [ in1 ])
+                      |> normalize }
+        | _ -> failwith "wires not correct"
 
 
 
