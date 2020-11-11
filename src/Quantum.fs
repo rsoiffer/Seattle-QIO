@@ -2,12 +2,12 @@
 
 #nowarn "25"
 
-open System.Numerics
+open ComplexNumbers
 
 
-type WireID = WireID of int
+type WireId = WireId of int
 
-type Bits = Bits of Map<WireID, bool>
+type Bits = Bits of Map<WireId, bool>
 
 let removeAll wires (Bits bits) =
     Seq.fold (fun b w -> Map.remove w b) bits wires
@@ -20,7 +20,7 @@ let merge (Bits newBits) (Bits bits) =
 
 let read (Bits bits) wireId = bits.[wireId]
 
-let B = Map.ofSeq >> Bits
+let B x = x |> Map.ofSeq |> Bits
 
 type Component = { Amplitude: Complex; State: Bits }
 let getAmplitude c = c.Amplitude
@@ -70,7 +70,7 @@ type Qubits with
 
     static member (*)(mult: float, q: Qubits) = q * mult
 
-    static member (/)(q: Qubits, mult: Complex) = q * Complex.Reciprocal mult
+    static member (/)(q: Qubits, mult: Complex) = q * (Complex.One / mult)
 
     static member (/)(q: Qubits, mult: float) = q * (1.0 / mult)
 
@@ -102,6 +102,10 @@ open Qubits
 type SystemState =
     { ClassicalState: Bits
       QuantumState: Qubits }
+
+let emptyState =
+    { ClassicalState = B []
+      QuantumState = Ket [] }
 
 let modifyClassical f state =
     { state with
@@ -148,7 +152,8 @@ module GateImplementations =
     let copyBits in' outs =
         modifyBits [ in' ] (fun [ val' ] -> outs |> Seq.map (fun out' -> out', val') |> B)
 
-    type GateImplementation = (WireID list) * (WireID list) -> SystemState -> SystemState
+
+    type GateImplementation = (WireId list) * (WireId list) -> SystemState -> SystemState
 
     let qbit: GateImplementation =
         function
@@ -205,6 +210,22 @@ module GateImplementations =
                       |> map (removeAll [ in1 ])
                       |> normalize }
         | _ -> failwith "wires not correct"
+
+    let InitQubit: GateImplementation =
+        function
+        | [], [ out1 ] -> modifyQuantum (modifyQubits [] (fun [] -> Ket [ out1, false ]))
+        | _ -> failwith "wires not correct"
+
+    let InitCbit: GateImplementation =
+        function
+        | [], [ out1 ] -> modifyClassical (merge (B [ out1, false ]))
+        | _ -> failwith "wires not correct"
+
+    let DestroyCbit: GateImplementation =
+        function
+        | [ in1 ], [] -> modifyClassical (removeAll [ in1 ])
+        | _ -> failwith "wires not correct"
+
 
 
 
