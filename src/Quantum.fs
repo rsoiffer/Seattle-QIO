@@ -225,9 +225,3 @@ module GateImplementations =
         function
         | [ in1 ], [] -> modifyClassical (removeAll [ in1 ])
         | _ -> failwith "wires not correct"
-
-
-
-
-
-let add1 x = x + 1

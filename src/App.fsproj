@@ -6,6 +6,7 @@
     <Compile Include="Complex.fs" />
     <Compile Include="Quantum.fs" />
     <Compile Include="BoardState.fs" />
+    <Compile Include="NodeDefinitions.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
