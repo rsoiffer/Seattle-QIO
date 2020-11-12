@@ -31,7 +31,7 @@ type Node =
 
 type WirePlacement =
     { Output: NodeOutputId
-      Input: NodeInputId }
+      Input: NodeInputId option }
 
 type Wire =
     { WireType: WireType
@@ -54,8 +54,11 @@ module Evaluator =
         else
             let mutable evalState = evalState
             for wire in boardState.Wires do
-                if wire.Value.Placement.Input.NodeId = nodeId
-                then evalState <- evalNode boardState wire.Value.Placement.Output.NodeId evalState
+                match wire.Value.Placement.Input with
+                | Some inputPlacement ->
+                    if inputPlacement.NodeId = nodeId
+                    then evalState <- evalNode boardState wire.Value.Placement.Output.NodeId evalState
+                | _ -> ()
 
             let outputs =
                 seq {
@@ -70,8 +73,10 @@ module Evaluator =
             let inputs =
                 seq {
                     for wire in boardState.Wires do
-                        if wire.Value.Placement.Input.NodeId = nodeId
-                        then yield wire.Value.Placement.Input.Port, wire.Key
+                        match wire.Value.Placement.Input with
+                        | Some inputPlacement ->
+                            if inputPlacement.NodeId = nodeId then yield inputPlacement.Port, wire.Key
+                        | None -> ()
                 }
                 |> Seq.sortBy fst
                 |> Seq.map snd

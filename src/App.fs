@@ -26,12 +26,12 @@ let boardState =
                       { WireType = { DataType = Quantum; Party = Alice }
                         Placement =
                             { Output = { NodeId = NodeId 1; Port = 0 }
-                              Input = { NodeId = NodeId 2; Port = 0 } } }
+                              Input = Some { NodeId = NodeId 2; Port = 0 } } }
                       WireId 4,
                       { WireType = { DataType = Quantum; Party = Alice }
                         Placement =
                             { Output = { NodeId = NodeId 2; Port = 0 }
-                              Input = { NodeId = NodeId 3; Port = 0 } } } ] }
+                              Input = None } } ] }
 
 let evalState = Evaluator.eval boardState
 
