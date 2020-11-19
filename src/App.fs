@@ -3,6 +3,7 @@ module App
 open BoardState
 open Browser.Dom
 open Fable.React
+open Fable.React.Props
 open Elmish
 open Elmish.React
 open Quantum
@@ -36,7 +37,7 @@ myButton.onclick <-
 
 let inline draggable props children = ofImport "default" "react-draggable" props children
  
-let view _ _ = draggable [] [ div [] [ str "hello world" ] ]
+let view _ _ = draggable [] [ div [ Class "box" ] [ str "goodbye world" ] ]
 
 Program.mkSimple (fun _ -> ()) (fun _ _ -> ()) view
 |> Program.withReactSynchronous "app"

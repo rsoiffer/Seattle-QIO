@@ -3,6 +3,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="style.sass" />
     <Compile Include="Complex.fs" />
     <Compile Include="Quantum.fs" />
     <Compile Include="BoardState.fs" />
