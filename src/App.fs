@@ -1,9 +1,11 @@
 module App
 
-open Browser.Dom
-open Quantum
 open BoardState
-
+open Browser.Dom
+open Fable.React
+open Elmish
+open Elmish.React
+open Quantum
 
 let boardState =
     { Nodes =
@@ -31,3 +33,11 @@ myButton.onclick <-
     fun _ ->
         count <- count + 1
         myButton.innerText <- evalState.ToString()
+
+let inline draggable props children = ofImport "default" "react-draggable" props children
+ 
+let view _ _ = draggable [] [ div [] [ str "hello world" ] ]
+
+Program.mkSimple (fun _ -> ()) (fun _ _ -> ()) view
+|> Program.withReactSynchronous "app"
+|> Program.run
