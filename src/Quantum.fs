@@ -195,6 +195,22 @@ module GateImplementations =
                      / sqrt 2.0))
         | _ -> failwith "wires not correct"
 
+    let CNOT: GateImplementation =
+        function
+        | [ in1; in2 ], [ out1; out2 ] ->
+            modifyQuantum
+                (modifyQubits [ in1; in2 ] (fun [ val1; val2 ] ->
+                     Ket [ out1, val1; out2, if val1 then not val2 else val2 ]))
+        | _ -> failwith "wires not correct"
+
+    let SWAP: GateImplementation =
+        function
+        | [ in1; in2 ], [ out1; out2 ] ->
+            modifyQuantum
+                (modifyQubits [ in1; in2 ] (fun [ val1; val2 ] ->
+                     Ket [ out1, val2; out2, val1 ]))
+        | _ -> failwith "wires not correct"
+
     let myRandom = System.Random()
 
     let M: GateImplementation =
