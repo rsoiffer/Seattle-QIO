@@ -11,7 +11,7 @@ type Party =
     | Alice
     | Bob
 
-type port =
+type Port =
     { DataType: DataType
       Party: Party }
 
@@ -19,8 +19,8 @@ let port d p = { DataType = d; Party = p }
 
 type NodeDefinition =
     { Name: string
-      Inputs: port list
-      Outputs: port list
+      Inputs: Port list
+      Outputs: Port list
       Implementation: Gates.Gate }
 
 
