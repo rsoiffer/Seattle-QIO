@@ -1,12 +1,14 @@
 module App
 
 open BoardState
-open Browser.Dom
-open Fable.React
-open Fable.React.Props
 open Elmish
 open Elmish.React
+open Fable.React
+open Fable.React.Props
+open NodeDefinitions
 open Quantum
+
+let inline draggable props children = ofImport "default" "react-draggable" props children
 
 let boardState =
     { Nodes =
@@ -20,25 +22,29 @@ let boardState =
                       { Left = { NodeId = NodeId 2; Port = 0 }
                         Right = None } ] }
 
-let evalState = eval boardState
+eval boardState |> printfn "%A"
 
-// Mutable variable to count the number of times we clicked the button
-let mutable count = 0
+let init () =
+    let initQubit =
+        { Name = "InitQubit"
+          Inputs = []
+          Outputs = []
+          Implementation = GateImplementations.InitQubit }
+    let h =
+        { Name = "H"
+          Inputs = []
+          Outputs = []
+          Implementation = GateImplementations.H }
+    [ NodeId 1, initQubit
+      NodeId 2, h ]
+    |> Map.ofSeq
 
-// Get a reference to our button and cast the Element to an HTMLButtonElement
-let myButton =
-    document.querySelector (".my-button") :?> Browser.Types.HTMLButtonElement
+let view model _ =
+    model
+    |> Map.toSeq
+    |> Seq.map (fun (_, node) -> draggable [] [ div [ Class "box" ] [ str node.Name ] ])
+    |> div []
 
-// Register our listener
-myButton.onclick <-
-    fun _ ->
-        count <- count + 1
-        myButton.innerText <- evalState.ToString()
-
-let inline draggable props children = ofImport "default" "react-draggable" props children
- 
-let view _ _ = draggable [] [ div [ Class "box" ] [ str "goodbye world" ] ]
-
-Program.mkSimple (fun _ -> ()) (fun _ _ -> ()) view
+Program.mkSimple init (fun _ -> id) view
 |> Program.withReactSynchronous "app"
 |> Program.run
