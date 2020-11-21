@@ -1,5 +1,6 @@
 module App
 
+open Board
 open Circuit
 open Elmish
 open Elmish.React
@@ -31,14 +32,25 @@ let boardState =
 eval boardState |> printfn "%A"
 
 let init () =
-    [ NodeId 1, InitQubit; NodeId 2, H ] |> Map.ofSeq
+    let initQubit =
+        { Definition = InitQubit
+          Visibility = NodeVisibility.Normal }
 
-let view model _ =
-    model
+    let h =
+        { Definition = H
+          Visibility = NodeVisibility.Normal }
+
+    { Board.Nodes = [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofList
+      Board.Wires = Map.empty }
+
+let view (model: Board) _ =
+    model.Nodes
     |> Map.toSeq
     |> Seq.map (fun (_, node) ->
         draggable [] [
-            div [ Class "box" ] [ str node.Name ]
+            div [ Class "box" ] [
+                str node.Definition.Name
+            ]
         ])
     |> div []
 
