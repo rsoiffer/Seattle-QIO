@@ -1,30 +1,59 @@
 module App
 
 open Circuit
-open Browser.Dom
-open Fable.React
-open Fable.React.Props
 open Elmish
 open Elmish.React
+open Fable.React
+open Fable.React.Props
+open NodeDefinitions
 open Quantum
 
-// Mutable variable to count the number of times we clicked the button
-let mutable count = 0
+let inline draggable props children =
+    ofImport "default" "react-draggable" props children
 
-// Get a reference to our button and cast the Element to an HTMLButtonElement
-let myButton =
-    document.querySelector (".my-button") :?> Browser.Types.HTMLButtonElement
+let boardState =
+    { Nodes =
+          Map.ofSeq [ NodeId 1, Gates.InitQubit
+                      NodeId 2, Gates.H
+                      NodeId 3, Gates.M
+                      NodeId 4, Gates.DestroyCbit ]
+      Wires =
+          Map.ofSeq [ WireId 5,
+                      { Left = { NodeId = NodeId 1; Port = 0 }
+                        Right = { NodeId = NodeId 2; Port = 0 } }
+                      WireId 6,
+                      { Left = { NodeId = NodeId 2; Port = 0 }
+                        Right = { NodeId = NodeId 3; Port = 0 } }
+                      WireId 7,
+                      { Left = { NodeId = NodeId 3; Port = 0 }
+                        Right = { NodeId = NodeId 4; Port = 0 } } ] }
 
-// Register our listener
-myButton.onclick <-
-    fun _ ->
-        count <- count + 1
-        // myButton.innerText <- evalState.ToString()
+eval boardState |> printfn "%A"
 
-let inline draggable props children = ofImport "default" "react-draggable" props children
- 
-let view _ _ = draggable [] [ div [ Class "box" ] [ str "goodbye world" ] ]
+let init () =
+    let initQubit =
+        { Name = "InitQubit"
+          Inputs = []
+          Outputs = []
+          Implementation = Gates.InitQubit }
 
-Program.mkSimple (fun _ -> ()) (fun _ _ -> ()) view
+    let h =
+        { Name = "H"
+          Inputs = []
+          Outputs = []
+          Implementation = Gates.H }
+
+    [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofSeq
+
+let view model _ =
+    model
+    |> Map.toSeq
+    |> Seq.map (fun (_, node) ->
+        draggable [] [
+            div [ Class "box" ] [ str node.Name ]
+        ])
+    |> div []
+
+Program.mkSimple init (fun _ -> id) view
 |> Program.withReactSynchronous "app"
 |> Program.run
