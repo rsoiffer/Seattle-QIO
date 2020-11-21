@@ -16,13 +16,9 @@ type Node =
       Visibility: NodeVisibility }
 
 
-type WireVisibility =
-    | Normal
-    | Invisible
-
 type Wire =
     { Placement: WirePlacement
-      Visible: WireVisibility }
+      Visible: bool }
 
 
 type Board =

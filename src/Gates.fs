@@ -70,6 +70,10 @@ type NodeDefinition =
       Gate: Gate }
 
 
+let gate_DoNothing: Gate =
+    function
+    | _ -> id
+
 
 let gate_qbit: Gate =
     function
@@ -140,6 +144,20 @@ let cbit_BA =
     { Name = "cbit_BA"
       Inputs = [ port Quantum Bob ]
       Outputs = [ port Quantum Alice ]
+      Gate = gate_cbit }
+
+
+let gate_CopyCbit: Gate =
+    function
+    | [ in1 ], [ out1; out2 ] -> modifyClassical (copyBits in1 [ out1; out2 ])
+    | _ -> failwith "wires not correct"
+
+let CopyCbit =
+    { Name = "cbit"
+      Inputs = [ port Classical Any ]
+      Outputs =
+          [ port Classical Any
+            port Classical Any ]
       Gate = gate_cbit }
 
 
@@ -322,3 +340,22 @@ let DestroyCbit =
       Inputs = [ port Classical Any ]
       Outputs = []
       Gate = gate_DestroyCbit }
+
+
+let gate_DestroyQubit: Gate =
+    function
+    | [ in1 ], [] ->
+        modifyQuantum (fun qState ->
+            let val' =
+                myRandom.NextDouble() < prob in1 true qState
+
+            postSelect in1 val' qState
+            |> map (removeAll [ in1 ])
+            |> normalize)
+    | _ -> failwith "wires not correct"
+
+let DestroyQubit =
+    { Name = "Destroy Qubit"
+      Inputs = [ port Quantum Any ]
+      Outputs = []
+      Gate = gate_DestroyQubit }
