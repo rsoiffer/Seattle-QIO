@@ -5,6 +5,7 @@
   <ItemGroup>
     <Content Include="style.sass" />
     <Compile Include="Complex.fs" />
+    <Compile Include="SparseVector.fs" />
     <Compile Include="Quantum.fs" />
     <Compile Include="Gates.fs" />
     <Compile Include="Circuit.fs" />
