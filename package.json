@@ -4,12 +4,13 @@
   "scripts": {
     "start": "webpack-dev-server"
   },
-  "dependencies": {
+  "devDependencies": {
     "@babel/core": "^7.12.3",
     "css-loader": "^5.0.1",
     "fable-compiler": "^2.13.0",
     "fable-loader": "^2.1.9",
     "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^4.5.0",
     "katex": "^0.12.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",

@@ -2,6 +2,7 @@
 // For a more comprehensive configuration check:
 // https://github.com/fable-compiler/webpack-config-template
 
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
 
 module.exports = {
@@ -13,6 +14,9 @@ module.exports = {
     path: path.join(__dirname, "./public"),
     filename: "bundle.js",
   },
+  plugins: [
+    new HtmlWebpackPlugin({ template: "./public/index.html" })
+  ],
   devServer: {
     publicPath: "/",
     contentBase: "./public",
