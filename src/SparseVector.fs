@@ -41,7 +41,40 @@ type SparseVector<'a> with
 
     static member (/)(s: SparseVector<'a>, mult: Complex) = s * Complex.div Complex.one mult
 
-let apply (channel: 'a -> SparseVector<_>) (SparseVector s) =
-    s
-    |> Map.toSeq
-    |> Seq.sumBy (fun (k, v) -> v * channel k)
+module SparseVector =
+
+    let apply (channel: 'a -> SparseVector<'b>) (SparseVector s) =
+        s
+        |> Map.toSeq
+        |> Seq.sumBy (fun (k, v) -> v * channel k)
+
+    let map (f: 'a * Complex -> 'b * Complex) (SparseVector s) =
+        s
+        |> Map.toSeq
+        |> Seq.map f
+        |> Map.ofSeq
+        |> SparseVector
+
+    let ofSeq (s: seq<'a * Complex>) = s |> Map.ofSeq |> SparseVector
+
+    let ofSeqF (s: seq<'a * float>) =
+        s
+        |> Seq.map (fun (k, v) -> k, Complex(v, 0.0))
+        |> Map.ofSeq
+        |> SparseVector
+
+    let sumBy (f: 'a -> Complex) (SparseVector s) =
+        s
+        |> Map.toSeq
+        |> Seq.sumBy (fun (k, v) -> v * f k)
+
+    let tensor (SparseVector s1) (SparseVector s2) =
+        seq {
+            for k1, v1 in Map.toSeq s1 do
+                for k2, v2 in Map.toSeq s2 do
+                    yield (k1, k2), v1 * v2
+        }
+        |> Map.ofSeq
+        |> SparseVector
+
+    let toSeq (SparseVector s) = s |> Map.toSeq

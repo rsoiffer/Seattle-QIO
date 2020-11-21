@@ -3,28 +3,23 @@ module Gates
 #nowarn "25" "49"
 
 open ComplexNumbers
+open SparseVector
 open Quantum
-open QubitInternals
-open Qubits
 
 module GateHelpers =
-    let bind (func: Bits -> Qubits) (Qubits q) =
-        seq {
-            for c in q do
-                yield c.Amplitude * func c.State
-        }
-        |> Seq.sum
+    let bind (func: Bits -> PureState) (MixedState rho) =
+        SparseVector.apply (fun (b1, b2) ->
+            match outer (func b1) (func b2) with
+            | MixedState m -> m) rho
+        |> MixedState
 
-    let map (func: Bits -> Bits) (Qubits q) =
-        seq {
-            for c in q do
-                yield { c with State = func c.State }
-        }
-        |> make
+    let map (func: Bits -> Bits) (MixedState rho) =
+        SparseVector.map (fun ((b1, b2), v) -> (func b1, func b2), v) rho
+        |> MixedState
 
-    let mapQuantum f = modifyQuantum (map f)
+    let mapQuantum f = (map f)
 
-    let bindQuantum f = modifyQuantum (bind f)
+    let bindQuantum f = (bind f)
 
     let modifyBits ins f bits =
         let result = List.map (read bits) ins |> f
@@ -48,7 +43,7 @@ open GateHelpers
 
 
 
-type Gate = WireId list * WireId list -> SystemState -> SystemState
+type Gate = WireId list * WireId list -> MixedState -> MixedState
 
 type DataType =
     | Classical
