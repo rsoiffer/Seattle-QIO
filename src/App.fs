@@ -5,7 +5,7 @@ open Elmish
 open Elmish.React
 open Fable.React
 open Fable.React.Props
-open NodeDefinitions
+open Gates
 open Quantum
 
 let inline draggable props children =
@@ -13,10 +13,10 @@ let inline draggable props children =
 
 let boardState =
     { Nodes =
-          Map.ofSeq [ NodeId 1, Gates.InitQubit
-                      NodeId 2, Gates.H
-                      NodeId 3, Gates.M
-                      NodeId 4, Gates.DestroyCbit ]
+          Map.ofSeq [ NodeId 1, gate_InitQubit
+                      NodeId 2, gate_H
+                      NodeId 3, gate_M
+                      NodeId 4, gate_DestroyCbit ]
       Wires =
           Map.ofSeq [ WireId 5,
                       { Left = { NodeId = NodeId 1; Port = 0 }
@@ -31,19 +31,7 @@ let boardState =
 eval boardState |> printfn "%A"
 
 let init () =
-    let initQubit =
-        { Name = "InitQubit"
-          Inputs = []
-          Outputs = []
-          Implementation = Gates.InitQubit }
-
-    let h =
-        { Name = "H"
-          Inputs = []
-          Outputs = []
-          Implementation = Gates.H }
-
-    [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofSeq
+    [ NodeId 1, InitQubit; NodeId 2, H ] |> Map.ofSeq
 
 let view model _ =
     model

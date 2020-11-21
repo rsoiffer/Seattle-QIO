@@ -1,8 +1,8 @@
 module Board
 
 open Quantum
+open Gates
 open Circuit
-open NodeDefinitions
 
 
 type NodeVisibility =

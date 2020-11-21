@@ -1,13 +1,23 @@
 module Levels
 
 open Quantum
+open Gates
 open Circuit
-open NodeDefinitions
 
 type Challenge =
     { Free: NodeDefinition
       Costly: (NodeDefinition * int) list
       Goal: NodeDefinition }
+
+let initialBoard challenge =
+    let goal = challenge.Goal
+    // let inputs = goal.Inputs |> Seq.map (function
+    // | Classical -> {
+    //     Definition = Ini
+    // }
+    // )
+    { Nodes = Map.ofSeq []
+      Wires = Map.ofSeq [] }
 
 
 let testOnce boardState successWire =

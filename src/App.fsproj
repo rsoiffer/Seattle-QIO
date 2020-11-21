@@ -6,8 +6,8 @@
     <Content Include="style.sass" />
     <Compile Include="Complex.fs" />
     <Compile Include="Quantum.fs" />
+    <Compile Include="Gates.fs" />
     <Compile Include="Circuit.fs" />
-    <Compile Include="NodeDefinitions.fs" />
     <Compile Include="Board.fs" />
     <Compile Include="Levels.fs" />
     <Compile Include="App.fs" />
