@@ -14,10 +14,10 @@ let inline draggable props children =
 
 let boardState =
     { Nodes =
-          Map.ofSeq [ NodeId 1, gate_InitQubit
+          Map.ofSeq [ NodeId 1, gate_InitBit
                       NodeId 2, gate_H
                       NodeId 3, gate_M
-                      NodeId 4, gate_DestroyCbit ]
+                      NodeId 4, gate_DestroyBit ]
       Wires =
           Map.ofSeq [ WireId 5,
                       { Left = { NodeId = NodeId 1; Port = 0 }
@@ -34,11 +34,9 @@ eval boardState |> printfn "%A"
 let init () =
     let initQubit =
         { Definition = InitQubit
-          Visibility = NodeVisibility.Normal }
+          Visibility = Normal }
 
-    let h =
-        { Definition = H
-          Visibility = NodeVisibility.Normal }
+    let h = { Definition = H; Visibility = Normal }
 
     { Board.Nodes = [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofList
       Board.Wires = Map.empty }

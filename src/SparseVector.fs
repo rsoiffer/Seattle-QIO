@@ -2,79 +2,83 @@ module SparseVector
 
 open ComplexNumbers
 
-type SparseVector<'a when 'a: comparison> = SparseVector of Map<'a, Complex>
+type SparseVector<'a when 'a: comparison> = private InitSparseVector of Map<'a, Complex>
 
-let read k v =
-    Option.defaultValue Complex.zero (Map.tryFind k v)
 
-type SparseVector<'a> with
-
-    static member Zero = SparseVector Map.empty
-
-    static member (+)(SparseVector s1, SparseVector s2) =
-        seq {
-            let keys =
-                [ Map.toSeq s1; Map.toSeq s2 ]
-                |> Seq.concat
-                |> Seq.map fst
-                |> Set.ofSeq
-
-            for k in keys do
-                let v = read k s1 + read k s2
-                if Complex.abs v > 1e-12 then yield k, v
-        }
-        |> Map.ofSeq
-        |> SparseVector
-
-    static member (-)(s1: SparseVector<'a>, s2: SparseVector<'a>) = s1 + s2 * -Complex.one
-
-    static member (*)(SparseVector s, mult: Complex) =
-        Map.map (fun _ v -> v * mult) s |> SparseVector
-
-    static member (*)(mult: Complex, s: SparseVector<'a>) = s * mult
-
-    static member (*)(s: SparseVector<'a>, mult: float) = s * Complex(mult, 0.0)
-
-    static member (*)(mult: float, s: SparseVector<'a>) = s * mult
-
-    static member (/)(s: SparseVector<'a>, mult: float) = s * (1.0 / mult)
-
-    static member (/)(s: SparseVector<'a>, mult: Complex) = s * Complex.div Complex.one mult
 
 module SparseVector =
 
-    let apply (channel: 'a -> SparseVector<'b>) (SparseVector s) =
+    let read k (InitSparseVector s) =
+        Option.defaultValue Complex.zero (Map.tryFind k s)
+
+    let ofSeq s =
         s
-        |> Map.toSeq
-        |> Seq.sumBy (fun (k, v) -> v * channel k)
+        |> Seq.fold (fun m (k, v) ->
+            let v2 =
+                match Map.tryFind k m with
+                | Some v' -> v + v'
+                | None -> v
 
-    let map (f: 'a * Complex -> 'b * Complex) (SparseVector s) =
-        s
-        |> Map.toSeq
-        |> Seq.map f
-        |> Map.ofSeq
-        |> SparseVector
+            if Complex.abs v2 > 1e-12 then Map.add k v2 m else Map.remove k m) Map.empty
+        |> InitSparseVector
 
-    let ofSeq (s: seq<'a * Complex>) = s |> Map.ofSeq |> SparseVector
+    let toSeq (InitSparseVector s) = s |> Map.toSeq
 
-    let ofSeqF (s: seq<'a * float>) =
+
+    let ofSeqF s =
         s
         |> Seq.map (fun (k, v) -> k, Complex(v, 0.0))
-        |> Map.ofSeq
-        |> SparseVector
+        |> ofSeq
 
-    let sumBy (f: 'a -> Complex) (SparseVector s) =
-        s
-        |> Map.toSeq
-        |> Seq.sumBy (fun (k, v) -> v * f k)
+    let mapBoth (f: _ -> _) = toSeq >> Seq.map f >> ofSeq
 
-    let tensor (SparseVector s1) (SparseVector s2) =
+    let map (f: _ -> _) = mapBoth (fun (k, v) -> f k, v)
+
+    let mapWeights (f: _ -> _) = mapBoth (fun (k, v) -> k, f v)
+
+
+    let zero = InitSparseVector Map.empty
+
+    let sum s1 s2 =
+        Seq.concat [ toSeq s1; toSeq s2 ] |> ofSeq
+
+    let mul mult = mapWeights (fun v -> v * mult)
+
+
+    let bind (channel: _ -> SparseVector<_>) =
+        toSeq
+        >> Seq.map (fun (k, v) -> mul v (channel k))
+        >> Seq.fold sum zero
+
+    let sumBy (f: _ -> Complex) =
+        toSeq >> Seq.sumBy (fun (k, v) -> v * f k)
+
+    let tensor s1 s2 =
         seq {
-            for k1, v1 in Map.toSeq s1 do
-                for k2, v2 in Map.toSeq s2 do
+            for k1, v1 in toSeq s1 do
+                for k2, v2 in toSeq s2 do
                     yield (k1, k2), v1 * v2
         }
-        |> Map.ofSeq
-        |> SparseVector
+        |> ofSeq
 
-    let toSeq (SparseVector s) = s |> Map.toSeq
+open SparseVector
+
+type SparseVector<'c when 'c: comparison> with
+
+    static member Zero = zero
+
+    static member (+)(s1: SparseVector<'a>, s2: SparseVector<'a>) = sum s1 s2
+
+    static member (-)(s1: SparseVector<'a>, s2: SparseVector<'a>) = s1 + s2 * -Complex.one
+
+    static member (*)(s: SparseVector<_>, mult: Complex) = mul mult s
+
+    static member (*)(mult: Complex, s: SparseVector<_>) = s * mult
+
+    static member (*)(s: SparseVector<_>, mult: float) = s * Complex(mult, 0.0)
+
+    static member (*)(mult: float, s: SparseVector<_>) = s * mult
+
+    static member (/)(s: SparseVector<_>, mult: float) = s * (1.0 / mult)
+
+    static member (/)(s: SparseVector<_>, mult: Complex) = s * Complex.div Complex.one mult

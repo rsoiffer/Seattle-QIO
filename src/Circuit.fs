@@ -17,7 +17,7 @@ type Circuit =
       Wires: Map<WireId, WirePlacement> }
 
 type EvaluatorState =
-    { State: SystemState
+    { State: MixedState
       Previous: NodeId Set }
 
 let rec evalNode circuit nodeId evalState =
@@ -52,10 +52,5 @@ let rec evalNode circuit nodeId evalState =
           Previous = Set.add nodeId evalState.Previous }
 
 let eval circuit =
-    let mutable evalState =
-        { State = emptyState
-          Previous = Set.empty }
-
-    for node in circuit.Nodes do
-        evalState <- evalNode circuit node.Key evalState
-    evalState
+    circuit.Nodes
+    |> Seq.fold (fun s n -> evalNode circuit n.Key s) { State = Rho []; Previous = Set.empty }

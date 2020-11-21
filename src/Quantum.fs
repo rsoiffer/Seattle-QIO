@@ -22,25 +22,20 @@ let read (Bits bits) wireId = bits.[wireId]
 let B x = x |> Map.ofSeq |> Bits
 
 
-type PureState = PureState of SparseVector<Bits>
-type MixedState = MixedState of SparseVector<Bits * Bits>
-// type Channel = Bits * Bits -> MixedState
+type PureState = SparseVector<Bits>
+type MixedState = SparseVector<Bits * Bits>
 
 
-let Ket x =
-    SparseVector.ofSeq [ x, Complex.one ] |> PureState
+let outer ket bra =
+    SparseVector.tensor ket (SparseVector.mapWeights Complex.conjugate bra)
 
-
-
-let outer (PureState ket) (PureState bra) =
-    SparseVector.tensor ket (SparseVector.map (fun (k, v) -> k, Complex.conjugate v) bra)
-    |> MixedState
-
-let adjoint (MixedState rho) =
+let adjoint rho =
     rho
-    |> SparseVector.map (fun ((b1, b2), v) -> (b2, b1), Complex.conjugate v)
-    |> MixedState
+    |> SparseVector.mapBoth (fun ((b1, b2), v) -> (b2, b1), Complex.conjugate v)
 
-let trace (MixedState rho) =
+let trace rho =
     rho
     |> SparseVector.sumBy (fun (b1, b2) -> if b1 = b2 then Complex.one else Complex.zero)
+
+let Ket x = SparseVector.ofSeq [ B x, Complex.one ]
+let Rho x = outer (Ket x) (Ket x)

@@ -7,35 +7,31 @@ open SparseVector
 open Quantum
 
 module GateHelpers =
-    let bind (func: Bits -> PureState) (MixedState rho) =
-        SparseVector.apply (fun (b1, b2) ->
-            match outer (func b1) (func b2) with
-            | MixedState m -> m) rho
-        |> MixedState
 
-    let map (func: Bits -> Bits) (MixedState rho) =
-        SparseVector.map (fun ((b1, b2), v) -> (func b1, func b2), v) rho
-        |> MixedState
+    let bind (func: Bits -> PureState) =
+        SparseVector.bind (fun (b1, b2) -> outer (func b1) (func b2))
 
-    let mapQuantum f = (map f)
-
-    let bindQuantum f = (bind f)
+    let map (func: Bits -> Bits) =
+        SparseVector.map (fun (b1, b2) -> func b1, func b2)
 
     let modifyBits ins f bits =
         let result = List.map (read bits) ins |> f
         bits |> removeAll ins |> merge result
 
-    let modifyQubits ins f =
+    let modifyBit in' f =
+        modifyBits [ in' ] (fun [ val' ] -> f val')
+
+    let copyBits in' outs =
+        modifyBit in' (fun val' -> outs |> Seq.map (fun out' -> out', val') |> B)
+
+    let unitary ins f =
         bind (fun bits ->
             List.map (read bits) ins
             |> f
-            |> map (fun mods -> bits |> removeAll ins |> merge mods))
+            |> SparseVector.map (bits |> removeAll ins |> merge))
 
-    let modifyQubit in' f =
-        modifyQubits [ in' ] (fun [ val' ] -> f val')
-
-    let copyBits in' outs =
-        modifyBits [ in' ] (fun [ val' ] -> outs |> Seq.map (fun out' -> out', val') |> B)
+    let unitary1 in' f =
+        unitary [ in' ] (fun [ val' ] -> f val')
 
     let myRandom = System.Random()
 
@@ -70,82 +66,70 @@ let gate_DoNothing: Gate =
     | _ -> id
 
 
-let gate_qbit: Gate =
+let gate_move: Gate =
     function
-    | [ in1 ], [ out1 ] -> mapQuantum (copyBits in1 [ out1 ])
+    | [ in1 ], [ out1 ] -> map (copyBits in1 [ out1 ])
     | _ -> failwith "wires not correct"
+
+let cbit =
+    { Name = "cbit"
+      Inputs = [ port Classical Any ]
+      Outputs = [ port Classical Any ]
+      Gate = gate_move }
+
+let cbit_AB =
+    { Name = "cbit_AB"
+      Inputs = [ port Classical Alice ]
+      Outputs = [ port Classical Bob ]
+      Gate = gate_move }
+
+let cbit_BA =
+    { Name = "cbit_BA"
+      Inputs = [ port Classical Bob ]
+      Outputs = [ port Classical Alice ]
+      Gate = gate_move }
 
 let qbit =
     { Name = "qbit"
       Inputs = [ port Quantum Any ]
       Outputs = [ port Quantum Any ]
-      Gate = gate_qbit }
+      Gate = gate_move }
 
 let qbit_AB =
     { Name = "qbit_AB"
       Inputs = [ port Quantum Alice ]
       Outputs = [ port Quantum Bob ]
-      Gate = gate_qbit }
+      Gate = gate_move }
 
 let qbit_BA =
     { Name = "qbit_BA"
       Inputs = [ port Quantum Bob ]
       Outputs = [ port Quantum Alice ]
-      Gate = gate_qbit }
+      Gate = gate_move }
 
 
-let gate_cobit: Gate =
+let gate_copy: Gate =
     function
-    | [ in1 ], [ out1; out2 ] -> mapQuantum (copyBits in1 [ out1; out2 ])
+    | [ in1 ], [ out1; out2 ] -> map (copyBits in1 [ out1; out2 ])
     | _ -> failwith "wires not correct"
 
 let cobit =
     { Name = "cobit"
       Inputs = [ port Quantum Any ]
       Outputs = [ port Quantum Any; port Quantum Any ]
-      Gate = gate_cobit }
+      Gate = gate_copy }
 
 let cobit_AB =
     { Name = "cobit_AB"
       Inputs = [ port Quantum Alice ]
       Outputs = [ port Quantum Alice; port Quantum Bob ]
-      Gate = gate_cobit }
+      Gate = gate_copy }
 
 let cobit_BA =
     { Name = "cobit_BA"
       Inputs = [ port Quantum Bob ]
       Outputs = [ port Quantum Bob; port Quantum Alice ]
-      Gate = gate_cobit }
-
-
-let gate_cbit: Gate =
-    function
-    | [ in1 ], [ out1 ] -> modifyClassical (copyBits in1 [ out1 ])
-    | _ -> failwith "wires not correct"
-
-let cbit =
-    { Name = "cbit"
-      Inputs = [ port Quantum Any ]
-      Outputs = [ port Quantum Any ]
-      Gate = gate_cbit }
-
-let cbit_AB =
-    { Name = "cbit_AB"
-      Inputs = [ port Quantum Alice ]
-      Outputs = [ port Quantum Bob ]
-      Gate = gate_cbit }
-
-let cbit_BA =
-    { Name = "cbit_BA"
-      Inputs = [ port Quantum Bob ]
-      Outputs = [ port Quantum Alice ]
-      Gate = gate_cbit }
-
-
-let gate_CopyCbit: Gate =
-    function
-    | [ in1 ], [ out1; out2 ] -> modifyClassical (copyBits in1 [ out1; out2 ])
-    | _ -> failwith "wires not correct"
+      Gate = gate_copy }
 
 let CopyCbit =
     { Name = "cbit"
@@ -153,28 +137,30 @@ let CopyCbit =
       Outputs =
           [ port Classical Any
             port Classical Any ]
-      Gate = gate_cbit }
+      Gate = gate_copy }
 
 
-let gate_X: Gate =
+let gate_not: Gate =
     function
-    | [ in1 ], [ out1 ] -> modifyQuantum (modifyQubit in1 (fun val1 -> Ket [ out1, not val1 ]))
+    | [ in1 ], [ out1 ] -> map (modifyBit in1 (fun val1 -> B [ out1, not val1 ]))
     | _ -> failwith "wires not correct"
 
 let X =
     { Name = "X"
       Inputs = [ port Quantum Any ]
       Outputs = [ port Quantum Any ]
-      Gate = gate_X }
+      Gate = gate_not }
+
+let Not =
+    { Name = "Not"
+      Inputs = [ port Classical Any ]
+      Outputs = [ port Classical Any ]
+      Gate = gate_not }
 
 
 let gate_Z: Gate =
     function
-    | [ in1 ], [ out1 ] ->
-        modifyQuantum
-            (modifyQubit in1 (fun val1 ->
-                 (Ket [ out1, val1 ])
-                 * (if val1 then -1.0 else 1.0)))
+    | [ in1 ], [ out1 ] -> unitary1 in1 (fun val1 -> Ket [ out1, val1 ] * (if val1 then -1.0 else 1.0))
     | _ -> failwith "wires not correct"
 
 let Z =
@@ -187,12 +173,11 @@ let Z =
 let gate_H: Gate =
     function
     | [ in1 ], [ out1 ] ->
-        modifyQuantum
-            (modifyQubit in1 (fun val1 ->
-                 (Ket [ out1, false ]
-                  + Ket [ out1, true ]
-                  * (if val1 then -1.0 else 1.0))
-                 / sqrt 2.0))
+        unitary1 in1 (fun val1 ->
+            (Ket [ out1, false ]
+             + Ket [ out1, true ]
+             * (if val1 then -1.0 else 1.0))
+            / sqrt 2.0)
     | _ -> failwith "wires not correct"
 
 let H =
@@ -205,10 +190,10 @@ let H =
 let gate_CNOT: Gate =
     function
     | [ in1; in2 ], [ out1; out2 ] ->
-        modifyQuantum
-            (modifyQubits [ in1; in2 ] (fun [ val1; val2 ] ->
-                 Ket [ out1, val1
-                       out2, (if val1 then not val2 else val2) ]))
+        map
+            (modifyBits [ in1; in2 ] (fun [ val1; val2 ] ->
+                 B [ out1, val1
+                     out2, (if val1 then not val2 else val2) ]))
     | _ -> failwith "wires not correct"
 
 let CNOT =
@@ -232,8 +217,7 @@ let CNOT_BA =
 
 let gate_SWAP: Gate =
     function
-    | [ in1; in2 ], [ out1; out2 ] ->
-        modifyQuantum (modifyQubits [ in1; in2 ] (fun [ val1; val2 ] -> Ket [ out1, val2; out2, val1 ]))
+    | [ in1; in2 ], [ out1; out2 ] -> map (modifyBits [ in1; in2 ] (fun [ val1; val2 ] -> B [ out1, val2; out2, val1 ]))
     | _ -> failwith "wires not correct"
 
 let SWAP =
@@ -246,15 +230,8 @@ let SWAP =
 let gate_M: Gate =
     function
     | [ in1 ], [ out1 ] ->
-        fun state ->
-            let val' =
-                myRandom.NextDouble() < prob in1 true state.QuantumState
-
-            { ClassicalState = merge (B [ out1, val' ]) state.ClassicalState
-              QuantumState =
-                  postSelect in1 val' state.QuantumState
-                  |> map (removeAll [ in1 ])
-                  |> normalize }
+        SparseVector.mapBoth (fun ((b1, b2), v) -> (b1, b2), (if read b1 in1 = read b2 in1 then v else Complex.zero))
+        >> map (copyBits in1 [ out1 ])
     | _ -> failwith "wires not correct"
 
 let M =
@@ -264,34 +241,39 @@ let M =
       Gate = gate_M }
 
 
-let gate_InitQubit: Gate =
+let gate_InitBit: Gate =
     function
-    | [], [ out1 ] -> modifyQuantum (modifyQubits [] (fun [] -> Ket [ out1, false ]))
+    | [], [ out1 ] -> map (merge (B [ out1, false ]))
     | _ -> failwith "wires not correct"
+
+let InitCbit =
+    { Name = "Init Cbit"
+      Inputs = []
+      Outputs = [ port Classical Any ]
+      Gate = gate_InitBit }
 
 let InitQubit =
     { Name = "Init Qubit"
       Inputs = []
       Outputs = [ port Quantum Any ]
-      Gate = gate_InitQubit }
+      Gate = gate_InitBit }
 
 
 let gate_InitQubitRandom: Gate =
     function
     | [], [ out1 ] ->
-        modifyQuantum
-            (modifyQubits [] (fun [] ->
-                 let a0 =
-                     Complex(myRandom.NextDouble(), myRandom.NextDouble())
+        unitary [] (fun [] ->
+            let a0 =
+                Complex(myRandom.NextDouble(), myRandom.NextDouble())
 
-                 let a1 =
-                     Complex(myRandom.NextDouble(), myRandom.NextDouble())
+            let a1 =
+                Complex(myRandom.NextDouble(), myRandom.NextDouble())
 
-                 let norm =
-                     sqrt (a0.Magnitude ** 2.0 + a1.Magnitude ** 2.0)
+            let norm =
+                sqrt (a0.Magnitude ** 2.0 + a1.Magnitude ** 2.0)
 
-                 (a0 * Ket [ out1, false ] + a1 * Ket [ out1, true ])
-                 / norm))
+            (a0 * Ket [ out1, false ] + a1 * Ket [ out1, true ])
+            / norm)
     | _ -> failwith "wires not correct"
 
 let InitQubitRandom =
@@ -301,21 +283,9 @@ let InitQubitRandom =
       Gate = gate_InitQubitRandom }
 
 
-let gate_InitCbit: Gate =
-    function
-    | [], [ out1 ] -> modifyClassical (merge (B [ out1, false ]))
-    | _ -> failwith "wires not correct"
-
-let InitCbit =
-    { Name = "Init Cbit"
-      Inputs = []
-      Outputs = [ port Classical Any ]
-      Gate = gate_InitCbit }
-
-
 let gate_InitCbitRandom: Gate =
     function
-    | [], [ out1 ] -> modifyClassical (merge (B [ out1, myRandom.NextDouble() > 0.5 ]))
+    | [], [ out1 ] -> map (merge (B [ out1, myRandom.NextDouble() > 0.5 ]))
     | _ -> failwith "wires not correct"
 
 let InitCbitRandom =
@@ -325,32 +295,21 @@ let InitCbitRandom =
       Gate = gate_InitCbitRandom }
 
 
-let gate_DestroyCbit: Gate =
+let gate_DestroyBit: Gate =
     function
-    | [ in1 ], [] -> modifyClassical (removeAll [ in1 ])
+    | [ in1 ], [] ->
+        SparseVector.mapBoth (fun ((b1, b2), v) -> (b1, b2), (if read b1 in1 = read b2 in1 then v else Complex.zero))
+        >> map (removeAll [ in1 ])
     | _ -> failwith "wires not correct"
 
 let DestroyCbit =
     { Name = "Destroy Cbit"
       Inputs = [ port Classical Any ]
       Outputs = []
-      Gate = gate_DestroyCbit }
-
-
-let gate_DestroyQubit: Gate =
-    function
-    | [ in1 ], [] ->
-        modifyQuantum (fun qState ->
-            let val' =
-                myRandom.NextDouble() < prob in1 true qState
-
-            postSelect in1 val' qState
-            |> map (removeAll [ in1 ])
-            |> normalize)
-    | _ -> failwith "wires not correct"
+      Gate = gate_DestroyBit }
 
 let DestroyQubit =
     { Name = "Destroy Qubit"
       Inputs = [ port Quantum Any ]
       Outputs = []
-      Gate = gate_DestroyQubit }
+      Gate = gate_DestroyBit }
