@@ -1,5 +1,7 @@
 module Levels
 
+open ComplexNumbers
+open SparseVector
 open Quantum
 open Gates
 open Circuit
@@ -10,89 +12,119 @@ type Challenge =
       Costly: (NodeDefinition * int) list
       Goal: NodeDefinition }
 
+let private myRandom = System.Random()
 
-let initialBoard challenge =
-    let myRandom = System.Random()
-
-    let inputId = myRandom.Next()
-    let outputId = myRandom.Next()
-    let oracleId = myRandom.Next()
-
-    let inputCreatorIds =
-        challenge.Goal.Inputs
-        |> Seq.map (fun _ -> myRandom.Next())
-
-    let inputCopierIds =
-        challenge.Goal.Inputs
-        |> Seq.map (fun _ -> myRandom.Next())
-
-    let outputCnotIds =
-        challenge.Goal.Outputs
-        |> Seq.map (fun _ -> myRandom.Next())
-
-    let outputDestructorIds =
-        challenge.Goal.Outputs
-        |> Seq.map (fun _ -> myRandom.Next())
-
-    let allNodes =
+let rec allPossibleBits =
+    function
+    | [] -> Seq.empty
+    | head :: tail ->
         seq {
-            let inputNode =
-                { Definition =
-                      { Name = "Input"
-                        Inputs = challenge.Goal.Inputs
-                        Outputs = challenge.Goal.Inputs
-                        Gate = gate_DoNothing }
-                  Visibility = HideInputs }
-
-            let outputNode =
-                { Definition =
-                      { Name = "Output"
-                        Inputs = challenge.Goal.Outputs
-                        Outputs = challenge.Goal.Outputs
-                        Gate = gate_DoNothing }
-                  Visibility = HideInputs }
-
-            let oracleNode =
-                { Definition = challenge.Goal
-                  Visibility = Invisible }
-
-            yield inputId, inputNode
-            yield outputId, outputNode
-            yield oracleId, oracleNode
-
-            for inputPort, creatorId, copierId in Seq.zip3 challenge.Goal.Inputs inputCreatorIds inputCopierIds do
-                match inputPort.DataType with
-                | Classical ->
-                    let creatorNode =
-                        { Definition = InitCbitRandom
-                          Visibility = Invisible }
-
-                    let copierNode =
-                        { Definition = CopyCbit
-                          Visibility = Invisible }
-
-                    yield creatorId, creatorNode
-
-                    yield copierId, copierNode
-                | Quantum ->
-                    let creatorNode =
-                        { Definition = InitQubitRandom
-                          Visibility = Invisible }
-
-                    let copierNode =
-                        { Definition = cobit
-                          Visibility = Invisible }
-
-                    yield creatorId, creatorNode
-
-                    yield copierId, copierNode
-
-            for outputPort, cnotId, destructorId in Seq.zip3 challenge.Goal.Outputs outputCnotIds outputDestructorIds do
-                match outputPort.DataType with
-                | Classical -> ()
-                | Quantum -> ()
+            for Bits others in allPossibleBits tail do
+                yield Map.add head false others |> Bits
+                yield Map.add head true others |> Bits
         }
 
+let randomClassicalState wireIds =
+    let allBits = allPossibleBits wireIds |> Array.ofSeq
+    allBits.[myRandom.Next(allBits.Length)]
 
-    { Nodes = Map.ofSeq []
+let randomPureState wireIds =
+    let allBits = allPossibleBits wireIds |> List.ofSeq
+
+    let r =
+        allBits
+        |> List.map (fun _ -> Complex(myRandom.NextDouble(), myRandom.NextDouble()))
+
+    let norm = r |> List.sumBy (fun a -> a.Magnitude)
+    r
+    |> List.map (fun a -> a / Complex(sqrt norm, 0.0))
+    |> List.zip allBits
+    |> SparseVector.ofSeq
+
+let initialBoard challenge =
+    let startId = NodeId(myRandom.Next())
+    let endId = NodeId(myRandom.Next())
+
+    let startNode =
+        { Definition =
+              { Name = "Input"
+                Inputs = []
+                Outputs = challenge.Goal.Inputs
+                Gate = gate_DoNothing }
+          Visibility = Normal }
+
+    let endNode =
+        { Definition =
+              { Name = "Output"
+                Inputs = challenge.Goal.Outputs
+                Outputs = []
+                Gate = gate_DoNothing }
+          Visibility = Normal }
+
+    { StartNodeId = startId
+      EndNodeId = endId
+      Nodes =
+          Map.ofSeq [ startId, startNode
+                      endId, endNode ]
       Wires = Map.ofSeq [] }
+
+let toCircuit board =
+    { Nodes = Map.map (fun _ node -> node.Definition.Gate) board.Nodes
+      Wires = Map.map (fun _ wire -> wire.Placement) board.Wires }
+
+let idx s = seq { 0 .. Seq.length s - 1 }
+
+let testOnce challenge board =
+    let circuit = toCircuit board
+    let startWireIds = outputWireIds circuit board.StartNodeId
+    let endWireIds = inputWireIds circuit board.EndNodeId
+
+    let classicalStartWires =
+        seq {
+            for i in idx challenge.Goal.Inputs do
+                if challenge.Goal.Inputs.[i].DataType = Classical
+                then yield startWireIds.[i]
+        }
+
+    let quantumStartWires =
+        seq {
+            yield WireId 0
+            for i in idx challenge.Goal.Inputs do
+                if challenge.Goal.Inputs.[i].DataType = Quantum
+                then yield startWireIds.[i]
+        }
+
+    let classicalState =
+        randomClassicalState (List.ofSeq classicalStartWires)
+
+    let quantumState =
+        randomPureState (List.ofSeq quantumStartWires)
+
+    let fullState =
+        SparseVector.tensor (SparseVector.ofSeq [ classicalState, Complex.one ]) quantumState
+        |> SparseVector.map (fun (b1, b2) -> merge b1 b2)
+
+    let inputState = outer fullState fullState
+
+    let oracleCircuit =
+        { Nodes =
+              Map.ofSeq [ NodeId 0, gate_DoNothing
+                          NodeId 1, challenge.Goal.Gate
+                          NodeId 2, gate_DoNothing ]
+          Wires =
+              Map.ofSeq
+                  (Seq.concat [ idx challenge.Goal.Inputs
+                                |> Seq.map (fun i ->
+                                    startWireIds.[i],
+                                    { Left = { NodeId = NodeId 0; Port = i }
+                                      Right = { NodeId = NodeId 1; Port = i } })
+                                idx challenge.Goal.Outputs
+                                |> Seq.map (fun i ->
+                                    endWireIds.[i],
+                                    { Left = { NodeId = NodeId 1; Port = i }
+                                      Right = { NodeId = NodeId 2; Port = i } }) ]) }
+
+    let realOutputState = eval circuit inputState
+    let oracleOutputState = eval oracleCircuit inputState
+
+    ()

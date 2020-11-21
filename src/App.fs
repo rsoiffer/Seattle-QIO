@@ -38,7 +38,9 @@ let init () =
 
     let h = { Definition = H; Visibility = Normal }
 
-    { Board.Nodes = [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofList
+    { Board.StartNodeId = NodeId 1
+      Board.EndNodeId = NodeId 2
+      Board.Nodes = [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofList
       Board.Wires = Map.empty }
 
 let view (model: Board) _ =

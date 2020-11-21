@@ -22,5 +22,7 @@ type Wire =
 
 
 type Board =
-    { Nodes: Map<NodeId, Node>
+    { StartNodeId: NodeId
+      EndNodeId: NodeId
+      Nodes: Map<NodeId, Node>
       Wires: Map<WireId, Wire> }
