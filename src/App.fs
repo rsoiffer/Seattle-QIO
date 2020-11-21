@@ -1,26 +1,12 @@
 module App
 
-open BoardState
+open Circuit
 open Browser.Dom
 open Fable.React
 open Fable.React.Props
 open Elmish
 open Elmish.React
 open Quantum
-
-let boardState =
-    { Nodes =
-          Map.ofSeq [ NodeId 1, GateImplementations.InitQubit
-                      NodeId 2, GateImplementations.H ]
-      Wires =
-          Map.ofSeq [ WireId 3,
-                      { Left = { NodeId = NodeId 1; Port = 0 }
-                        Right = Some { NodeId = NodeId 2; Port = 0 } }
-                      WireId 4,
-                      { Left = { NodeId = NodeId 2; Port = 0 }
-                        Right = None } ] }
-
-let evalState = eval boardState
 
 // Mutable variable to count the number of times we clicked the button
 let mutable count = 0
@@ -33,7 +19,7 @@ let myButton =
 myButton.onclick <-
     fun _ ->
         count <- count + 1
-        myButton.innerText <- evalState.ToString()
+        // myButton.innerText <- evalState.ToString()
 
 let inline draggable props children = ofImport "default" "react-draggable" props children
  

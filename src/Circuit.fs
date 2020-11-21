@@ -1,7 +1,7 @@
-module BoardState
+module Circuit
 
 open Quantum
-open GateImplementations
+open Gates
 
 
 type NodeId = NodeId of int
@@ -10,32 +10,28 @@ type NodeInputId = { NodeId: NodeId; Port: int }
 
 type WirePlacement =
     { Left: NodeOutputId
-      Right: NodeInputId option }
+      Right: NodeInputId }
 
-type BoardState =
-    { Nodes: Map<NodeId, GateImplementation>
+type Circuit =
+    { Nodes: Map<NodeId, Gate>
       Wires: Map<WireId, WirePlacement> }
 
-
-type EvaluationState =
+type EvaluatorState =
     { State: SystemState
       Previous: NodeId Set }
 
-let rec evalNode boardState nodeId evalState =
+let rec evalNode circuit nodeId evalState =
     if Set.contains nodeId evalState.Previous then
         evalState
     else
         let mutable evalState = evalState
-        for wire in boardState.Wires do
-            match wire.Value.Right with
-            | Some inputPlacement ->
-                if inputPlacement.NodeId = nodeId
-                then evalState <- evalNode boardState wire.Value.Left.NodeId evalState
-            | _ -> ()
+        for wire in circuit.Wires do
+            if wire.Value.Right.NodeId = nodeId
+            then evalState <- evalNode circuit wire.Value.Left.NodeId evalState
 
         let outputs =
             seq {
-                for wire in boardState.Wires do
+                for wire in circuit.Wires do
                     if wire.Value.Left.NodeId = nodeId then yield wire.Value.Left.Port, wire.Key
             }
             |> Seq.sortBy fst
@@ -44,24 +40,22 @@ let rec evalNode boardState nodeId evalState =
 
         let inputs =
             seq {
-                for wire in boardState.Wires do
-                    match wire.Value.Right with
-                    | Some inputPlacement -> if inputPlacement.NodeId = nodeId then yield inputPlacement.Port, wire.Key
-                    | None -> ()
+                for wire in circuit.Wires do
+                    if wire.Value.Right.NodeId = nodeId then yield wire.Value.Right.Port, wire.Key
             }
             |> Seq.sortBy fst
             |> Seq.map snd
             |> List.ofSeq
 
         printfn "%s" ((inputs, outputs).ToString())
-        { State = boardState.Nodes.[nodeId] (inputs, outputs) evalState.State
+        { State = circuit.Nodes.[nodeId] (inputs, outputs) evalState.State
           Previous = Set.add nodeId evalState.Previous }
 
-let eval boardState =
+let eval circuit =
     let mutable evalState =
         { State = emptyState
           Previous = Set.empty }
 
-    for node in boardState.Nodes do
-        evalState <- evalNode boardState node.Key evalState
+    for node in circuit.Nodes do
+        evalState <- evalNode circuit node.Key evalState
     evalState

@@ -17,87 +17,87 @@ type Port =
 
 let Port d p = { DataType = d; Party = p }
 
-type Node =
+type NodeDefinition =
     { Name: string
       Inputs: Port list
       Outputs: Port list
-      Implementation: GateImplementations.GateImplementation }
+      Implementation: Gates.Gate }
 
 
 let X =
     { Name = "X"
       Inputs = [ Port Quantum Any ]
       Outputs = [ Port Quantum Any ]
-      Implementation = GateImplementations.X }
+      Implementation = Gates.X }
 
 let Z =
     { Name = "Z"
       Inputs = [ Port Quantum Any ]
       Outputs = [ Port Quantum Any ]
-      Implementation = GateImplementations.Z }
+      Implementation = Gates.Z }
 
 let H =
     { Name = "H"
       Inputs = [ Port Quantum Any ]
       Outputs = [ Port Quantum Any ]
-      Implementation = GateImplementations.H }
+      Implementation = Gates.H }
 
 let qbit_AB =
     { Name = "qbit_AB"
       Inputs = [ Port Quantum Alice ]
       Outputs = [ Port Quantum Bob ]
-      Implementation = GateImplementations.qbit }
+      Implementation = Gates.qbit }
 
 let qbit_BA =
     { Name = "qbit_BA"
       Inputs = [ Port Quantum Bob ]
       Outputs = [ Port Quantum Alice ]
-      Implementation = GateImplementations.qbit }
+      Implementation = Gates.qbit }
 
 let cobit_AB =
     { Name = "cobit_AB"
       Inputs = [ Port Quantum Alice ]
       Outputs = [ Port Quantum Alice; Port Quantum Bob ]
-      Implementation = GateImplementations.cobit }
+      Implementation = Gates.cobit }
 
 let cobit_BA =
     { Name = "cobit_BA"
       Inputs = [ Port Quantum Bob ]
       Outputs = [ Port Quantum Bob; Port Quantum Alice ]
-      Implementation = GateImplementations.cobit }
+      Implementation = Gates.cobit }
 
 let cbit_AB =
     { Name = "cbit_AB"
       Inputs = [ Port Quantum Alice ]
       Outputs = [ Port Quantum Bob ]
-      Implementation = GateImplementations.cbit }
+      Implementation = Gates.cbit }
 
 let cbit_BA =
     { Name = "cbit_BA"
       Inputs = [ Port Quantum Bob ]
       Outputs = [ Port Quantum Alice ]
-      Implementation = GateImplementations.cbit }
+      Implementation = Gates.cbit }
 
 let CNOT =
     { Name = "CNOT"
       Inputs = [ Port Quantum Any; Port Quantum Any ]
       Outputs = [ Port Quantum Any; Port Quantum Any ]
-      Implementation = GateImplementations.CNOT }
+      Implementation = Gates.CNOT }
 
 let CNOT_AB =
     { Name = "CNOT_AB"
       Inputs = [ Port Quantum Alice; Port Quantum Bob ]
       Outputs = [ Port Quantum Alice; Port Quantum Bob ]
-      Implementation = GateImplementations.CNOT }
+      Implementation = Gates.CNOT }
 
 let CNOT_BA =
     { Name = "CNOT_BA"
       Inputs = [ Port Quantum Bob; Port Quantum Alice ]
       Outputs = [ Port Quantum Bob; Port Quantum Alice ]
-      Implementation = GateImplementations.CNOT }
+      Implementation = Gates.CNOT }
 
 let SWAP =
     { Name = "SWAP"
       Inputs = [ Port Quantum Alice; Port Quantum Bob ]
       Outputs = [ Port Quantum Alice; Port Quantum Bob ]
-      Implementation = GateImplementations.SWAP }
+      Implementation = Gates.SWAP }
