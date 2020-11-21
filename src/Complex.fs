@@ -101,11 +101,7 @@ module Complex =
     ///Multiplies complex number a by scalar b
     let muls (a: complex) (b: float) = mkRect (a.r * b, a.i * b)
 
-    let fmt_of_string numstyle fmtprovider (s: string) =
-        mkRect (System.Double.Parse(s, numstyle, fmtprovider), 0.0)
-
-    let of_string s =
-        fmt_of_string NumberStyles.Any CultureInfo.InvariantCulture s
+    let of_string s = mkRect (Double.Parse s, 0.0)
 
     // ik.(r + i.th) = -k.th + i.k.r
     ///Rotates a complex number 90° counterclockwise and multiplies by scalar k
