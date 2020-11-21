@@ -117,7 +117,7 @@ let modifyQuantum f state =
 
 
 
-module GateImplementations =
+module Gates =
     let bind (func: Bits -> Qubits) (Qubits q) =
         seq {
             for c in q do
@@ -153,29 +153,29 @@ module GateImplementations =
         modifyBits [ in' ] (fun [ val' ] -> outs |> Seq.map (fun out' -> out', val') |> B)
 
 
-    type GateImplementation = (WireId list) * (WireId list) -> SystemState -> SystemState
+    type Gate = (WireId list) * (WireId list) -> SystemState -> SystemState
 
-    let qbit: GateImplementation =
+    let qbit: Gate =
         function
         | [ in1 ], [ out1 ] -> mapQuantum (copyBits in1 [ out1 ])
         | _ -> failwith "wires not correct"
 
-    let cobit: GateImplementation =
+    let cobit: Gate =
         function
         | [ in1 ], [ out1; out2 ] -> mapQuantum (copyBits in1 [ out1; out2 ])
         | _ -> failwith "wires not correct"
 
-    let cbit: GateImplementation =
+    let cbit: Gate =
         function
         | [ in1 ], [ out1 ] -> modifyClassical (copyBits in1 [ out1 ])
         | _ -> failwith "wires not correct"
 
-    let X: GateImplementation =
+    let X: Gate =
         function
         | [ in1 ], [ out1 ] -> modifyQuantum (modifyQubit in1 (fun val1 -> Ket [ out1, not val1 ]))
         | _ -> failwith "wires not correct"
 
-    let Z: GateImplementation =
+    let Z: Gate =
         function
         | [ in1 ], [ out1 ] ->
             modifyQuantum
@@ -184,7 +184,7 @@ module GateImplementations =
                      * (if val1 then -1.0 else 1.0)))
         | _ -> failwith "wires not correct"
 
-    let H: GateImplementation =
+    let H: Gate =
         function
         | [ in1 ], [ out1 ] ->
             modifyQuantum
@@ -195,25 +195,24 @@ module GateImplementations =
                      / sqrt 2.0))
         | _ -> failwith "wires not correct"
 
-    let CNOT: GateImplementation =
+    let CNOT: Gate =
         function
         | [ in1; in2 ], [ out1; out2 ] ->
             modifyQuantum
                 (modifyQubits [ in1; in2 ] (fun [ val1; val2 ] ->
-                     Ket [ out1, val1; out2, if val1 then not val2 else val2 ]))
+                     Ket [ out1, val1
+                           out2, (if val1 then not val2 else val2) ]))
         | _ -> failwith "wires not correct"
 
-    let SWAP: GateImplementation =
+    let SWAP: Gate =
         function
         | [ in1; in2 ], [ out1; out2 ] ->
-            modifyQuantum
-                (modifyQubits [ in1; in2 ] (fun [ val1; val2 ] ->
-                     Ket [ out1, val2; out2, val1 ]))
+            modifyQuantum (modifyQubits [ in1; in2 ] (fun [ val1; val2 ] -> Ket [ out1, val2; out2, val1 ]))
         | _ -> failwith "wires not correct"
 
     let myRandom = System.Random()
 
-    let M: GateImplementation =
+    let M: Gate =
         function
         | [ in1 ], [ out1 ] ->
             fun state ->
@@ -227,17 +226,40 @@ module GateImplementations =
                       |> normalize }
         | _ -> failwith "wires not correct"
 
-    let InitQubit: GateImplementation =
+    let InitQubit: Gate =
         function
         | [], [ out1 ] -> modifyQuantum (modifyQubits [] (fun [] -> Ket [ out1, false ]))
         | _ -> failwith "wires not correct"
 
-    let InitCbit: GateImplementation =
+    let InitQubitRandom: Gate =
+        function
+        | [], [ out1 ] ->
+            modifyQuantum
+                (modifyQubits [] (fun [] ->
+                     let a0 =
+                         Complex(myRandom.NextDouble(), myRandom.NextDouble())
+
+                     let a1 =
+                         Complex(myRandom.NextDouble(), myRandom.NextDouble())
+
+                     let norm =
+                         sqrt (a0.Magnitude ** 2.0 + a1.Magnitude ** 2.0)
+
+                     (a0 * Ket [ out1, false ] + a1 * Ket [ out1, true ])
+                     / norm))
+        | _ -> failwith "wires not correct"
+
+    let InitCbit: Gate =
         function
         | [], [ out1 ] -> modifyClassical (merge (B [ out1, false ]))
         | _ -> failwith "wires not correct"
 
-    let DestroyCbit: GateImplementation =
+    let InitCbitRandom: Gate =
+        function
+        | [], [ out1 ] -> modifyClassical (merge (B [ out1, myRandom.NextDouble() > 0.5 ]))
+        | _ -> failwith "wires not correct"
+
+    let DestroyCbit: Gate =
         function
         | [ in1 ], [] -> modifyClassical (removeAll [ in1 ])
         | _ -> failwith "wires not correct"

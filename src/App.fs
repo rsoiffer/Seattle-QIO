@@ -1,6 +1,6 @@
 module App
 
-open BoardState
+open Circuit
 open Elmish
 open Elmish.React
 open Fable.React
@@ -8,19 +8,25 @@ open Fable.React.Props
 open NodeDefinitions
 open Quantum
 
-let inline draggable props children = ofImport "default" "react-draggable" props children
+let inline draggable props children =
+    ofImport "default" "react-draggable" props children
 
 let boardState =
     { Nodes =
-          Map.ofSeq [ NodeId 1, GateImplementations.InitQubit
-                      NodeId 2, GateImplementations.H ]
+          Map.ofSeq [ NodeId 1, Gates.InitQubit
+                      NodeId 2, Gates.H
+                      NodeId 3, Gates.M
+                      NodeId 4, Gates.DestroyCbit ]
       Wires =
-          Map.ofSeq [ WireId 3,
+          Map.ofSeq [ WireId 5,
                       { Left = { NodeId = NodeId 1; Port = 0 }
-                        Right = Some { NodeId = NodeId 2; Port = 0 } }
-                      WireId 4,
+                        Right = { NodeId = NodeId 2; Port = 0 } }
+                      WireId 6,
                       { Left = { NodeId = NodeId 2; Port = 0 }
-                        Right = None } ] }
+                        Right = { NodeId = NodeId 3; Port = 0 } }
+                      WireId 7,
+                      { Left = { NodeId = NodeId 3; Port = 0 }
+                        Right = { NodeId = NodeId 4; Port = 0 } } ] }
 
 eval boardState |> printfn "%A"
 
@@ -29,20 +35,23 @@ let init () =
         { Name = "InitQubit"
           Inputs = []
           Outputs = []
-          Implementation = GateImplementations.InitQubit }
+          Implementation = Gates.InitQubit }
+
     let h =
         { Name = "H"
           Inputs = []
           Outputs = []
-          Implementation = GateImplementations.H }
-    [ NodeId 1, initQubit
-      NodeId 2, h ]
-    |> Map.ofSeq
+          Implementation = Gates.H }
+
+    [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofSeq
 
 let view model _ =
     model
     |> Map.toSeq
-    |> Seq.map (fun (_, node) -> draggable [] [ div [ Class "box" ] [ str node.Name ] ])
+    |> Seq.map (fun (_, node) ->
+        draggable [] [
+            div [ Class "box" ] [ str node.Name ]
+        ])
     |> div []
 
 Program.mkSimple init (fun _ -> id) view
