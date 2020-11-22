@@ -1,6 +1,7 @@
 ﻿module Quantum
 
 open ComplexNumbers
+open SparseVector
 
 
 type WireId = WireId of int
@@ -8,6 +9,8 @@ type WireId = WireId of int
 type Bits = Bits of Map<WireId, bool>
 
 let removeAll wires (Bits bits) =
+    for w in wires do
+        if not (Map.containsKey w bits) then failwith "Removing invalid wire"
     Seq.fold (fun b w -> Map.remove w b) bits wires
     |> Bits
 
@@ -18,97 +21,65 @@ let merge (Bits newBits) (Bits bits) =
 
 let read (Bits bits) wireId = bits.[wireId]
 
+let allWires (Bits bits) = bits |> Map.toSeq |> Seq.map fst
+
 let B x = x |> Map.ofSeq |> Bits
 
-type Component = { Amplitude: Complex; State: Bits }
-let getAmplitude c = c.Amplitude
-let getBits c = c.State
-
-type Qubits = Qubits of Component list
-
-
-module QubitInternals =
-
-    let simplify (Qubits q) =
+let rec allPossibleBits =
+    function
+    | [] -> seq { B [] }
+    | head :: tail ->
         seq {
-            for b, q in Seq.groupBy getBits q do
-                let mySum =
-                    q
-                    |> Seq.map getAmplitude
-                    |> Seq.fold (+) Complex.Zero
-
-                if mySum.Magnitude > 1e-6 then yield { Amplitude = mySum; State = b }
+            for Bits others in allPossibleBits tail do
+                yield Map.add head false others |> Bits
+                yield Map.add head true others |> Bits
         }
+
+
+type PureState = SparseVector<Bits>
+type MixedState = SparseVector<Bits * Bits>
+
+
+let outer ket bra =
+    SparseVector.tensor ket (SparseVector.mapWeights Complex.conjugate bra)
+
+let adjoint rho =
+    rho
+    |> SparseVector.mapBoth (fun ((b1, b2), v) -> (b2, b1), Complex.conjugate v)
+
+let norm psi =
+    psi
+    |> SparseVector.mapBoth (fun (k, v) -> v, Complex.one)
+    |> SparseVector.sumBy (fun v -> Complex(v.Magnitude ** 2.0, 0.0))
+
+let trace rho =
+    rho
+    |> SparseVector.sumBy (fun (b1, b2) -> if b1 = b2 then Complex.one else Complex.zero)
+
+let Ket x = SparseVector.ofSeq [ B x, Complex.one ]
+let Rho x = outer (Ket x) (Ket x)
+
+
+let prettyPrint (rho: MixedState) =
+    let wires =
+        rho
+        |> SparseVector.toSeq
+        |> Seq.head
+        |> fst
+        |> fst
+        |> allWires
         |> List.ofSeq
-        |> Qubits
 
-    let make = List.ofSeq >> Qubits >> simplify
+    let allBits = allPossibleBits wires |> List.ofSeq
 
-open QubitInternals
+    let entries =
+        allBits
+        |> List.map (fun x ->
+            allBits
+            |> List.map (fun y ->
+                let a = SparseVector.read (x, y) rho
+                if (a.Magnitude < 1e-6) then "              0" else sprintf "(%.2f + %.2f i)" a.r a.i))
 
-
-type Qubits with
-
-    static member Zero = Qubits List.empty
-
-    static member (+)(Qubits q1, Qubits q2) = Seq.concat [ q1; q2 ] |> make
-
-    static member (-)(q1: Qubits, q2: Qubits) = q1 + q2 * -Complex.One
-
-    static member (*)(Qubits q, mult: Complex) =
-        q
-        |> Seq.map (fun c ->
-            { c with
-                  Amplitude = c.Amplitude * mult })
-        |> make
-
-    static member (*)(q: Qubits, mult: float) = q * Complex(mult, 0.0)
-
-    static member (*)(mult: Complex, q: Qubits) = q * mult
-
-    static member (*)(mult: float, q: Qubits) = q * mult
-
-    static member (/)(q: Qubits, mult: Complex) = q * (Complex.One / mult)
-
-    static member (/)(q: Qubits, mult: float) = q * (1.0 / mult)
-
-
-module Qubits =
-
-    let Pure bits =
-        Qubits [ { Amplitude = Complex.One
-                   State = bits } ]
-
-    let Ket = B >> Pure
-
-    let magnitude (Qubits qubits) =
-        Seq.sumBy (fun c -> c.Amplitude.Magnitude ** 2.0) qubits
-
-    let postSelect wireId val' (Qubits qubits) =
-        qubits
-        |> Seq.filter (fun c -> read c.State wireId = val')
-        |> make
-
-    let prob wireId val' qubits =
-        postSelect wireId val' qubits |> magnitude
-
-    let normalize qubits = qubits / sqrt (magnitude qubits)
-
-open Qubits
-
-
-type SystemState =
-    { ClassicalState: Bits
-      QuantumState: Qubits }
-
-let emptyState =
-    { ClassicalState = B []
-      QuantumState = Ket [] }
-
-let modifyClassical f state =
-    { state with
-          ClassicalState = f state.ClassicalState }
-
-let modifyQuantum f state =
-    { state with
-          QuantumState = f state.QuantumState }
+    entries
+    |> Seq.map (Seq.fold (fun x y -> x + "  " + y) "")
+    |> Seq.fold (fun x y -> x + "\n" + y) ""

@@ -16,15 +16,13 @@ type Node =
       Visibility: NodeVisibility }
 
 
-type WireVisibility =
-    | Normal
-    | Invisible
-
 type Wire =
     { Placement: WirePlacement
-      Visible: WireVisibility }
+      Visible: bool }
 
 
 type Board =
-    { Nodes: Map<NodeId, Node>
+    { StartNodeId: NodeId
+      EndNodeId: NodeId
+      Nodes: Map<NodeId, Node>
       Wires: Map<WireId, Wire> }
