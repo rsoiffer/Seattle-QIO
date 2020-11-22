@@ -47,7 +47,9 @@ let board =
               Visible = true } ]
           |> Map.ofList }
 
-eval (toCircuit board) |> printfn "%A"
+let challenge = { Free = []; Costly = []; Goal = InitCbitRandom }
+
+testOnce challenge board |> printfn "%A"
 
 let init () = board
 

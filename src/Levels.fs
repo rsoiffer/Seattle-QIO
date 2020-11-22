@@ -8,7 +8,7 @@ open Circuit
 open Board
 
 type Challenge =
-    { Free: NodeDefinition
+    { Free: NodeDefinition list
       Costly: (NodeDefinition * int) list
       Goal: NodeDefinition }
 
@@ -16,7 +16,7 @@ let private myRandom = System.Random()
 
 let rec allPossibleBits =
     function
-    | [] -> Seq.empty
+    | [] -> seq { B [] }
     | head :: tail ->
         seq {
             for Bits others in allPossibleBits tail do

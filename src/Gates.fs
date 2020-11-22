@@ -30,8 +30,7 @@ module GateHelpers =
             |> f
             |> SparseVector.map (bits |> removeAll ins |> merge))
 
-    let unitary1 in' f =
-        unitary [ in' ] (fun [ val' ] -> f val')
+    let unitary1 in' f = unitary [ in' ] (fun [ val' ] -> f val')
 
     let myRandom = System.Random()
 

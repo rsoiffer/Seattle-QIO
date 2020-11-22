@@ -69,16 +69,16 @@ type SparseVector<'c when 'c: comparison> with
 
     static member (+)(s1: SparseVector<'a>, s2: SparseVector<'a>) = sum s1 s2
 
-    static member (-)(s1: SparseVector<'a>, s2: SparseVector<'a>) = s1 + s2 * -Complex.one
+    static member (-)(s1: SparseVector<'a>, s2: SparseVector<'a>) = s1 + s2 * -1.0
 
-    static member (*)(s: SparseVector<_>, mult: Complex) = mul mult s
+    static member (*)(s: SparseVector<'a>, mult: Complex) = mul mult s
 
-    static member (*)(mult: Complex, s: SparseVector<_>) = s * mult
+    static member (*)(mult: Complex, s: SparseVector<'a>) = s * mult
 
-    static member (*)(s: SparseVector<_>, mult: float) = s * Complex(mult, 0.0)
+    static member (*)(s: SparseVector<'a>, mult: float) = mul (Complex(mult, 0.0)) s
 
-    static member (*)(mult: float, s: SparseVector<_>) = s * mult
+    static member (*)(mult: float, s: SparseVector<'a>) = mul (Complex(mult, 0.0)) s
 
-    static member (/)(s: SparseVector<_>, mult: float) = s * (1.0 / mult)
+    static member (/)(s: SparseVector<'a>, mult: float) = s * (1.0 / mult)
 
-    static member (/)(s: SparseVector<_>, mult: Complex) = s * Complex.div Complex.one mult
+    static member (/)(s: SparseVector<'a>, mult: Complex) = mul (Complex.div Complex.one mult) s
