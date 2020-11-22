@@ -7,41 +7,49 @@ open Elmish.React
 open Fable.React
 open Fable.React.Props
 open Gates
+open Levels
 open Quantum
 
 let inline draggable props children =
     ofImport "default" "react-draggable" props children
 
-let boardState =
-    { Nodes =
-          Map.ofSeq [ NodeId 1, gate_InitBit
-                      NodeId 2, gate_H
-                      NodeId 3, gate_M
-                      NodeId 4, gate_DestroyBit ]
-      Wires =
-          Map.ofSeq [ WireId 5,
-                      { Left = { NodeId = NodeId 1; Port = 0 }
-                        Right = { NodeId = NodeId 2; Port = 0 } }
-                      WireId 6,
-                      { Left = { NodeId = NodeId 2; Port = 0 }
-                        Right = { NodeId = NodeId 3; Port = 0 } }
-                      WireId 7,
-                      { Left = { NodeId = NodeId 3; Port = 0 }
-                        Right = { NodeId = NodeId 4; Port = 0 } } ] }
+let board =
+    { Board.StartNodeId = NodeId 0
+      Board.EndNodeId = NodeId 3
+      Board.Nodes =
+          [ NodeId 0,
+            { Definition = startNodeDef []
+              Visibility = Normal }
+            NodeId 1,
+            { Definition = InitQubit
+              Visibility = Normal }
+            NodeId 2, { Definition = H; Visibility = Normal }
+            NodeId 3, { Definition = M; Visibility = Normal }
+            NodeId 4,
+            { Definition = endNodeDef [ port Quantum Any ]
+              Visibility = Normal } ]
+          |> Map.ofList
+      Board.Wires =
+          [ WireId 0,
+            { Placement =
+                  { Left = { NodeId = NodeId 1; Port = 0 }
+                    Right = { NodeId = NodeId 2; Port = 0 } }
+              Visible = true }
+            WireId 1,
+            { Placement =
+                  { Left = { NodeId = NodeId 2; Port = 0 }
+                    Right = { NodeId = NodeId 3; Port = 0 } }
+              Visible = true }
+            WireId 2,
+            { Placement =
+                  { Left = { NodeId = NodeId 3; Port = 0 }
+                    Right = { NodeId = NodeId 4; Port = 0 } }
+              Visible = true } ]
+          |> Map.ofList }
 
-eval boardState |> printfn "%A"
+eval (toCircuit board) |> printfn "%A"
 
-let init () =
-    let initQubit =
-        { Definition = InitQubit
-          Visibility = Normal }
-
-    let h = { Definition = H; Visibility = Normal }
-
-    { Board.StartNodeId = NodeId 1
-      Board.EndNodeId = NodeId 2
-      Board.Nodes = [ NodeId 1, initQubit; NodeId 2, h ] |> Map.ofList
-      Board.Wires = Map.empty }
+let init () = board
 
 let view (model: Board) _ =
     model.Nodes

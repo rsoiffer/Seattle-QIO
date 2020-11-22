@@ -41,24 +41,29 @@ let randomPureState wireIds =
     |> List.zip allBits
     |> SparseVector.ofSeq
 
+
+let startNodeDef inputs =
+    { Name = "Input"
+      Inputs = []
+      Outputs = inputs
+      Gate = gate_DoNothing }
+
+let endNodeDef outputs =
+    { Name = "Output"
+      Inputs = outputs
+      Outputs = []
+      Gate = gate_DoNothing }
+
 let initialBoard challenge =
     let startId = NodeId(myRandom.Next())
     let endId = NodeId(myRandom.Next())
 
     let startNode =
-        { Definition =
-              { Name = "Input"
-                Inputs = []
-                Outputs = challenge.Goal.Inputs
-                Gate = gate_DoNothing }
+        { Definition = startNodeDef challenge.Goal.Inputs
           Visibility = Normal }
 
     let endNode =
-        { Definition =
-              { Name = "Output"
-                Inputs = challenge.Goal.Outputs
-                Outputs = []
-                Gate = gate_DoNothing }
+        { Definition = endNodeDef challenge.Goal.Outputs
           Visibility = Normal }
 
     { StartNodeId = startId
@@ -127,4 +132,4 @@ let testOnce challenge board =
     let realOutputState = eval circuit inputState
     let oracleOutputState = eval oracleCircuit inputState
 
-    ()
+    realOutputState, oracleOutputState
