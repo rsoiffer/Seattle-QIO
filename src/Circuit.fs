@@ -49,7 +49,7 @@ let rec private evalNode circuit nodeId evalState =
         let evalState =
             Seq.fold (fun es wireId -> evalNode circuit circuit.Wires.[wireId].Left.NodeId es) evalState inputs
 
-        // printfn "Evaluated node %s, state is %s" (nodeId.ToString()) (evalState.State.ToString())
+        // printfn "Evaluated node %s, state is %s" (nodeId.ToString()) (prettyPrint evalState.State)
         { State = circuit.Nodes.[nodeId] (inputs, outputs) evalState.State
           Previous = Set.add nodeId evalState.Previous }
 

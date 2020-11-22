@@ -26,21 +26,21 @@ let board =
             NodeId 2, { Definition = H; Visibility = Normal }
             NodeId 3, { Definition = M; Visibility = Normal }
             NodeId 4,
-            { Definition = endNodeDef [ port Quantum Any ]
+            { Definition = endNodeDef [ port Classical Any ]
               Visibility = Normal } ]
           |> Map.ofList
       Board.Wires =
-          [ WireId 0,
+          [ WireId 5,
             { Placement =
                   { Left = { NodeId = NodeId 1; Port = 0 }
                     Right = { NodeId = NodeId 2; Port = 0 } }
               Visible = true }
-            WireId 1,
+            WireId 6,
             { Placement =
                   { Left = { NodeId = NodeId 2; Port = 0 }
                     Right = { NodeId = NodeId 3; Port = 0 } }
               Visible = true }
-            WireId 2,
+            WireId 7,
             { Placement =
                   { Left = { NodeId = NodeId 3; Port = 0 }
                     Right = { NodeId = NodeId 4; Port = 0 } }
@@ -49,7 +49,9 @@ let board =
 
 let challenge = { Free = []; Costly = []; Goal = InitCbitRandom }
 
-testOnce challenge board |> printfn "%A"
+let realOutputState, oracleOutputState = testOnce challenge board
+printfn "%s" (prettyPrint realOutputState)
+printfn "%s" (prettyPrint oracleOutputState)
 
 let init () = board
 

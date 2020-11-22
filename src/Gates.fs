@@ -258,40 +258,25 @@ let InitQubit =
       Gate = gate_InitBit }
 
 
-let gate_InitQubitRandom: Gate =
+let gate_InitBitRandom: Gate =
     function
     | [], [ out1 ] ->
-        unitary [] (fun [] ->
-            let a0 =
-                Complex(myRandom.NextDouble(), myRandom.NextDouble())
-
-            let a1 =
-                Complex(myRandom.NextDouble(), myRandom.NextDouble())
-
-            let norm =
-                sqrt (a0.Magnitude ** 2.0 + a1.Magnitude ** 2.0)
-
-            (a0 * Ket [ out1, false ] + a1 * Ket [ out1, true ])
-            / norm)
-    | _ -> failwith "wires not correct"
-
-let InitQubitRandom =
-    { Name = "Init Random Qubit"
-      Inputs = []
-      Outputs = [ port Quantum Any ]
-      Gate = gate_InitQubitRandom }
-
-
-let gate_InitCbitRandom: Gate =
-    function
-    | [], [ out1 ] -> map (merge (B [ out1, myRandom.NextDouble() > 0.5 ]))
+        SparseVector.bind (fun (b1, b2) ->
+            SparseVector.ofSeqF [ (merge b1 (B [ out1, false ]), merge b2 (B [ out1, false ])), 0.5
+                                  (merge b1 (B [ out1, true ]), merge b2 (B [ out1, true ])), 0.5 ])
     | _ -> failwith "wires not correct"
 
 let InitCbitRandom =
     { Name = "Init Random Cbit"
       Inputs = []
       Outputs = [ port Classical Any ]
-      Gate = gate_InitCbitRandom }
+      Gate = gate_InitBitRandom }
+
+let InitQubitRandom =
+    { Name = "Init Random Qubit"
+      Inputs = []
+      Outputs = [ port Quantum Any ]
+      Gate = gate_InitBitRandom }
 
 
 let gate_DestroyBit: Gate =

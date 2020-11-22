@@ -14,16 +14,6 @@ type Challenge =
 
 let private myRandom = System.Random()
 
-let rec allPossibleBits =
-    function
-    | [] -> seq { B [] }
-    | head :: tail ->
-        seq {
-            for Bits others in allPossibleBits tail do
-                yield Map.add head false others |> Bits
-                yield Map.add head true others |> Bits
-        }
-
 let randomClassicalState wireIds =
     let allBits = allPossibleBits wireIds |> Array.ofSeq
     allBits.[myRandom.Next(allBits.Length)]
@@ -35,7 +25,7 @@ let randomPureState wireIds =
         allBits
         |> List.map (fun _ -> Complex(myRandom.NextDouble(), myRandom.NextDouble()))
 
-    let norm = r |> List.sumBy (fun a -> a.Magnitude)
+    let norm = r |> List.sumBy (fun a -> a.Magnitude ** 2.0)
     r
     |> List.map (fun a -> a / Complex(sqrt norm, 0.0))
     |> List.zip allBits
@@ -131,5 +121,10 @@ let testOnce challenge board =
 
     let realOutputState = eval circuit inputState
     let oracleOutputState = eval oracleCircuit inputState
+
+    // printfn "%A" (norm quantumState)
+    // printfn "%s" (prettyPrint inputState)
+    // printfn "%s" (prettyPrint realOutputState)
+    // printfn "%s" (prettyPrint oracleOutputState)
 
     realOutputState, oracleOutputState
