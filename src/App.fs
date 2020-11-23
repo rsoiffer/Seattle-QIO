@@ -88,12 +88,11 @@ let private view (model: Board) dispatch =
         |> Map.toSeq
         |> Seq.map (fun (nodeId, node) ->
             draggable [ node.Position |> Position.ofBoard |> Position
-                        DraggableEventHandler(fun _ data ->
+                        OnStop(fun _ data ->
                             SetNodePosition(nodeId, { X = data.x; Y = data.y })
                             |> dispatch
 
-                            true)
-                        |> OnStop ] [
+                            true) ] [
                 div [ Class "box" ] [
                     str node.Definition.Name
                 ]
