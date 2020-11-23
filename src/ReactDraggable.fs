@@ -24,8 +24,7 @@ module Position =
 
 type DraggableProp =
     | Position of Position
-    | OnStop of DraggableEventHandler
-    | Id of string
+    | OnDrag of DraggableEventHandler
 
 let inline draggable props children =
     ofImport "default" "react-draggable" (keyValueList CaseRules.LowerFirst props) children

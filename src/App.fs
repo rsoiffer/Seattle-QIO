@@ -80,7 +80,8 @@ let init () = board
 
 let private view (model: Board) dispatch =
     let addNode =
-        button [ OnClick <| fun _ -> dispatch AddNode ] [
+        button [ OnClick
+                 <| fun _ -> dispatch AddNode ] [
             str "Add Node"
         ]
 
@@ -91,40 +92,34 @@ let private view (model: Board) dispatch =
         let rightNodeId =
             model.Wires.[wireId].Placement.Right.NodeId
 
-        printfn "Making wire %s to %s" (printWireId wireId) (printNodeId rightNodeId)
-
-        archerElement [ ReactArcher.Id(printWireId wireId)
-                        Relations [| { targetId = printNodeId rightNodeId
-                                       targetAnchor = Left
-                                       sourceAnchor = Right
-                                       label = None
-                                       style =
-                                           { ArcherStyle.defaults with
-                                                 strokeColor = Some "blue"
-                                                 strokeWidth = Some 1 }
-                                           |> Some } |] ] [
-            div [] [ str "Arrow" ]
-        ]
+        { targetId = printNodeId rightNodeId
+          targetAnchor = Left
+          sourceAnchor = Right
+          label = None
+          style =
+              { ArcherStyle.defaults with
+                    strokeColor = Some "blue"
+                    strokeWidth = Some 1 }
+              |> Some }
 
     let makeNode nodeId =
         let node = model.Nodes.[nodeId]
 
-        draggable [ Id(printNodeId nodeId)
-                    node.Position |> Position.ofBoard |> Position
-                    OnStop(fun _ data ->
+        draggable [ Position(node.Position |> Position.ofBoard)
+                    OnDrag(fun _ data ->
                         SetNodePosition(nodeId, { X = data.x; Y = data.y })
                         |> dispatch
-
-                        true)
-                     ] [
+                        true) ] [
             div [] [
-                div [ Class "box" ] [
-                    str node.Definition.Name
+                archerElement [ Id(printNodeId nodeId)
+                                Relations
+                                    (outputWireIds (toCircuit model) nodeId
+                                     |> List.map makeWire
+                                     |> Array.ofList) ] [
+                    div [ Class "box" ] [
+                        str node.Definition.Name
+                    ]
                 ]
-                div
-                    [ Class "wires" ]
-                    (outputWireIds (toCircuit model) nodeId
-                     |> List.map makeWire)
             ]
         ]
 
@@ -136,7 +131,9 @@ let private view (model: Board) dispatch =
 
     div [ Class "app" ] [
         div [ Class "toolbar" ] [ addNode ]
-        archerContainer [ Class "board" ] [ nodes ]
+        archerContainer [ Class "board" ] [
+            nodes
+        ]
     ]
 
 let private update message (model: Board) =
