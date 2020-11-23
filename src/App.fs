@@ -69,7 +69,8 @@ let board =
                   { Left = { NodeId = NodeId 3; Port = 0 }
                     Right = { NodeId = NodeId 4; Port = 0 } }
               Visible = true } ]
-          |> Map.ofList }
+          |> Map.ofList
+      Board.WireCreationState = NotDragging }
 
 let challenge =
     { Free = []

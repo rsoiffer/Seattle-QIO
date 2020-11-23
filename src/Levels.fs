@@ -63,7 +63,8 @@ let initialBoard challenge =
       Nodes =
           Map.ofSeq [ startId, startNode
                       endId, endNode ]
-      Wires = Map.ofSeq [] }
+      Wires = Map.ofSeq []
+      WireCreationState = NotDragging }
 
 let toCircuit board =
     { Nodes = Map.map (fun _ node -> node.Definition.Gate) board.Nodes
