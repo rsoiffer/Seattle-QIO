@@ -80,8 +80,7 @@ let init () = board
 
 let private view (model: Board) dispatch =
     let addNode =
-        button [ OnClick
-                 <| fun _ -> dispatch AddNode ] [
+        button [ OnClick <| fun _ -> dispatch AddNode ] [
             str "Add Node"
         ]
 
@@ -93,17 +92,23 @@ let private view (model: Board) dispatch =
             model.Wires.[wireId].Placement.Right.NodeId
 
         printfn "Making wire %s to %s" (printWireId wireId) (printNodeId rightNodeId)
+
         archerElement [ ReactArcher.Id(printWireId wireId)
-                        Relations [| TargetId(printNodeId rightNodeId)
-                                     TargetAnchor Left
-                                     SourceAnchor Right
-                                     Style [ StrokeColor "blue"
-                                             StrokeWidth 1 ] |] ] [
+                        Relations [| { targetId = printNodeId rightNodeId
+                                       targetAnchor = Left
+                                       sourceAnchor = Right
+                                       label = None
+                                       style =
+                                           { ArcherStyle.defaults with
+                                                 strokeColor = Some "blue"
+                                                 strokeWidth = Some 1 }
+                                           |> Some } |] ] [
             div [] [ str "Arrow" ]
         ]
 
     let makeNode nodeId =
         let node = model.Nodes.[nodeId]
+
         draggable [ Id(printNodeId nodeId)
                     node.Position |> Position.ofBoard |> Position
                     DraggableEventHandler(fun _ data ->

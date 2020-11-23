@@ -5,11 +5,19 @@ open Fable.Core.JsInterop
 open Fable.React
 
 type ArcherStyle =
-    | StrokeColor of string
-    | StrokeWidth of int
-    | StrokeDashArray of int
-    | NoCurves of bool
-    | EndShape of obj
+    { strokeColor: string option
+      strokeWidth: int option
+      strokeDashArray: int option
+      noCurves: bool option
+      endShape: obj option }
+
+module ArcherStyle =
+    let defaults =
+        { strokeColor = None
+          strokeWidth = None
+          strokeDashArray = None
+          noCurves = None
+          endShape = None }
 
 [<StringEnum>]
 type AnchorType =
@@ -20,15 +28,15 @@ type AnchorType =
     | Middle
 
 type Relation =
-    | TargetId of string
-    | TargetAnchor of AnchorType
-    | SourceAnchor of AnchorType
-    | Label of ReactElement
-    | Style of ArcherStyle list
+    { targetId: string
+      targetAnchor: AnchorType
+      sourceAnchor: AnchorType
+      label: ReactElement option
+      style: ArcherStyle option }
 
 type ArcherElementProps =
     | Id of string
-    | Relations of Relation array
+    | Relations of Relation[]
 
 let inline archerContainer props children =
     ofImport "ArcherContainer" "react-archer" (keyValueList CaseRules.LowerFirst props) children
