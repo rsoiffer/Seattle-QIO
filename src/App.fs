@@ -8,6 +8,7 @@ open Fable.React
 open Fable.React.Props
 open Gates
 open Levels
+open ReactArcher
 open Quantum
 
 type Message = AddNode
@@ -52,7 +53,10 @@ let board =
               Visible = true } ]
           |> Map.ofList }
 
-let challenge = { Free = []; Costly = []; Goal = InitCbitRandom }
+let challenge =
+    { Free = []
+      Costly = []
+      Goal = InitCbitRandom }
 
 let realOutputState, oracleOutputState = testOnce challenge board
 printfn "%s" (prettyPrint realOutputState)
@@ -62,22 +66,49 @@ let init () = board
 
 let private view (model: Board) dispatch =
     let addNode =
-        button [ OnClick <| fun _ -> dispatch AddNode ] [
+        button [ OnClick
+                 <| fun _ -> dispatch AddNode ] [
             str "Add Node"
+        ]
+
+    let printNodeId (NodeId nodeId) = sprintf "Node%i" nodeId
+    let printWireId (WireId wireId) = sprintf "Wire%i" wireId
+
+    let makeWire wireId =
+        let rightNodeId =
+            model.Wires.[wireId].Placement.Right.NodeId
+
+        printfn "Making wire %s to %s" (printWireId wireId) (printNodeId rightNodeId)
+        archerElement [ Id(printWireId wireId)
+                        Relations [| TargetId(printNodeId rightNodeId)
+                                     TargetAnchor Left
+                                     SourceAnchor Right
+                                     Style [
+                                       StrokeColor "blue"; StrokeWidth 1
+                                     ] |] ] [
+            div [] [ str "Arrow" ]
+        ]
+
+    let makeNode nodeId =
+        draggable [ Id(printNodeId nodeId) ] [
+            div [] [
+                div [ Class "box" ] [
+                    str model.Nodes.[nodeId].Definition.Name
+                ]
+                div
+                    [ Class "wires" ]
+                    (outputWireIds (toCircuit model) nodeId
+                     |> List.map makeWire)
+            ]
         ]
 
     let nodes =
         model.Nodes
         |> Map.toSeq
-        |> Seq.map (fun (_, node) ->
-            draggable [] [
-                div [ Class "box" ] [
-                    str node.Definition.Name
-                ]
-            ])
+        |> Seq.map (fun (nodeId, _) -> makeNode nodeId)
         |> div []
 
-    div [] [ addNode; nodes ]
+    div [] [ addNode; archerContainer [] [nodes] ]
 
 let private update message (model: Board) =
     match message with
