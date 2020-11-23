@@ -1,4 +1,4 @@
-module App
+module internal App
 
 open Board
 open Circuit
@@ -10,14 +10,19 @@ open Gates
 open Levels
 open ReactArcher
 open Quantum
+open ReactDraggable
 
-type Message = AddNode
+type Message =
+    | AddNode
+    | SetNodePosition of NodeId * Board.Position
 
 let private tryMax xs =
     if Seq.isEmpty xs then None else Seq.max xs |> Some
 
-let inline private draggable props children =
-    ofImport "default" "react-draggable" props children
+let private change key f map =
+    match Map.tryFind key map |> f with
+    | Some value -> Map.add key value map
+    | None -> map
 
 let board =
     { Board.StartNodeId = NodeId 0
@@ -25,15 +30,24 @@ let board =
       Board.Nodes =
           [ NodeId 0,
             { Definition = startNodeDef []
-              Visibility = Normal }
+              Visibility = Normal
+              Position = { X = 0.0; Y = 0.0 } }
             NodeId 1,
             { Definition = InitQubit
-              Visibility = Normal }
-            NodeId 2, { Definition = H; Visibility = Normal }
-            NodeId 3, { Definition = M; Visibility = Normal }
+              Visibility = Normal
+              Position = { X = 200.0; Y = 0.0 } }
+            NodeId 2,
+            { Definition = H
+              Visibility = Normal
+              Position = { X = 400.0; Y = 0.0 } }
+            NodeId 3,
+            { Definition = M
+              Visibility = Normal
+              Position = { X = 600.0; Y = 0.0 } }
             NodeId 4,
             { Definition = endNodeDef [ port Classical Any ]
-              Visibility = Normal } ]
+              Visibility = Normal
+              Position = { X = 800.0; Y = 0.0 } } ]
           |> Map.ofList
       Board.Wires =
           [ WireId 5,
@@ -79,21 +93,28 @@ let private view (model: Board) dispatch =
             model.Wires.[wireId].Placement.Right.NodeId
 
         printfn "Making wire %s to %s" (printWireId wireId) (printNodeId rightNodeId)
-        archerElement [ Id(printWireId wireId)
+        archerElement [ ReactArcher.Id(printWireId wireId)
                         Relations [| TargetId(printNodeId rightNodeId)
                                      TargetAnchor Left
                                      SourceAnchor Right
-                                     Style [
-                                       StrokeColor "blue"; StrokeWidth 1
-                                     ] |] ] [
+                                     Style [ StrokeColor "blue"
+                                             StrokeWidth 1 ] |] ] [
             div [] [ str "Arrow" ]
         ]
 
     let makeNode nodeId =
-        draggable [ Id(printNodeId nodeId) ] [
+        let node = model.Nodes.[nodeId]
+        draggable [ Id(printNodeId nodeId)
+                    node.Position |> Position.ofBoard |> Position
+                    DraggableEventHandler(fun _ data ->
+                        SetNodePosition(nodeId, { X = data.x; Y = data.y })
+                        |> dispatch
+
+                        true)
+                    |> OnStop ] [
             div [] [
                 div [ Class "box" ] [
-                    str model.Nodes.[nodeId].Definition.Name
+                    str node.Definition.Name
                 ]
                 div
                     [ Class "wires" ]
@@ -108,7 +129,10 @@ let private view (model: Board) dispatch =
         |> Seq.map (fun (nodeId, _) -> makeNode nodeId)
         |> div []
 
-    div [] [ addNode; archerContainer [] [nodes] ]
+    div [] [
+        addNode
+        archerContainer [] [ nodes ]
+    ]
 
 let private update message (model: Board) =
     match message with
@@ -123,10 +147,16 @@ let private update message (model: Board) =
 
         let x =
             { Definition = X
-              Visibility = NodeVisibility.Normal }
+              Visibility = NodeVisibility.Normal
+              Position = { X = 0.0; Y = 50.0 } }
 
         { model with
               Nodes = model.Nodes |> Map.add nodeId x }
+    | SetNodePosition (nodeId, position) ->
+        { model with
+              Nodes =
+                  model.Nodes
+                  |> change nodeId (Option.map (fun node -> { node with Position = position })) }
 
 Program.mkSimple init update view
 |> Program.withReactSynchronous "app"

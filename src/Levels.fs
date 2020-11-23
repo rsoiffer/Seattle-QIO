@@ -50,11 +50,13 @@ let initialBoard challenge =
 
     let startNode =
         { Definition = startNodeDef challenge.Goal.Inputs
-          Visibility = Normal }
+          Visibility = Normal
+          Position = { X = 0.0; Y = 0.0 } }
 
     let endNode =
         { Definition = endNodeDef challenge.Goal.Outputs
-          Visibility = Normal }
+          Visibility = Normal
+          Position = { X = 200.0; Y = 0.0 } }
 
     { StartNodeId = startId
       EndNodeId = endId

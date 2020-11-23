@@ -12,6 +12,7 @@
     <Compile Include="Board.fs" />
     <Compile Include="Levels.fs" />
     <Compile Include="ReactArcher.fs" />
+    <Compile Include="ReactDraggable.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
