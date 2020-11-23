@@ -134,9 +134,9 @@ let private view (model: Board) dispatch =
         |> Seq.map (fun (nodeId, _) -> makeNode nodeId)
         |> div []
 
-    div [] [
-        addNode
-        archerContainer [] [ nodes ]
+    div [ Class "app" ] [
+        div [ Class "toolbar" ] [ addNode ]
+        archerContainer [ Class "board" ] [ nodes ]
     ]
 
 let private update message (model: Board) =
