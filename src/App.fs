@@ -47,7 +47,11 @@ let board =
             NodeId 4,
             { Definition = endNodeDef [ port Classical Any ]
               Visibility = Normal
-              Position = { X = 800.0; Y = 0.0 } } ]
+              Position = { X = 800.0; Y = 0.0 } }
+            NodeId 5,
+            { Definition = CNOT_AB
+              Visibility = Normal
+              Position = { X = 500.0; Y = 100.0 } } ]
           |> Map.ofList
       Board.Wires =
           [ WireId 5,
@@ -72,9 +76,9 @@ let challenge =
       Costly = []
       Goal = InitCbitRandom }
 
-let realOutputState, oracleOutputState = testOnce challenge board
-printfn "%s" (prettyPrint realOutputState)
-printfn "%s" (prettyPrint oracleOutputState)
+// let realOutputState, oracleOutputState = testOnce challenge board
+// printfn "%s" (prettyPrint realOutputState)
+// printfn "%s" (prettyPrint oracleOutputState)
 
 let init () = board
 
@@ -85,14 +89,14 @@ let private view (model: Board) dispatch =
             str "Add Node"
         ]
 
-    let printNodeId (NodeId nodeId) = sprintf "Node%i" nodeId
-    let printWireId (WireId wireId) = sprintf "Wire%i" wireId
+    let printNodePortId (NodeId nodeId) isOutput port =
+        sprintf "Node%iType%bPort%i" nodeId isOutput port
 
-    let makeWire wireId =
+    let makeWire portId wireId =
         let rightNodeId =
             model.Wires.[wireId].Placement.Right.NodeId
 
-        { targetId = printNodeId rightNodeId
+        { targetId = printNodePortId rightNodeId false portId
           targetAnchor = Left
           sourceAnchor = Right
           label = None
@@ -102,24 +106,57 @@ let private view (model: Board) dispatch =
                     strokeWidth = Some 1 }
               |> Some }
 
-    let makeNode nodeId =
+    let makePort nodeId isOutputPort portId =
         let node = model.Nodes.[nodeId]
 
+        let port =
+            if isOutputPort then node.Definition.Outputs.[portId] else node.Definition.Inputs.[portId]
+
+        let myClass =
+            System.String.Join
+                (" ",
+                 seq {
+                     yield "port"
+                     if port.DataType = Classical then yield "port-classical"
+                     if port.Party = Alice then yield "port-alice"
+                     if port.Party = Bob then yield "port-bob"
+                 })
+
+        let relations =
+            if isOutputPort then
+                outputWireIds (toCircuit model) nodeId
+                |> List.filter (fun wireId -> model.Wires.[wireId].Placement.Left.Port = portId)
+                |> List.map (makeWire portId)
+                |> Array.ofList
+            else
+                [||]
+
+        archerElement [ Id(printNodePortId nodeId isOutputPort portId)
+                        Relations relations ] [
+            div [ Class myClass ] []
+        ]
+
+    let makeNode nodeId =
+        let node = model.Nodes.[nodeId]
         draggable [ Position(node.Position |> Position.ofBoard)
                     OnDrag(fun _ data ->
                         SetNodePosition(nodeId, { X = data.x; Y = data.y })
                         |> dispatch
                         true) ] [
-            div [] [
-                archerElement [ Id(printNodeId nodeId)
-                                Relations
-                                    (outputWireIds (toCircuit model) nodeId
-                                     |> List.map makeWire
-                                     |> Array.ofList) ] [
-                    div [ Class "box" ] [
-                        str node.Definition.Name
-                    ]
+            div [ Class "node" ] [
+                div
+                    [ Class "portstack" ]
+                    (node.Definition.Inputs
+                     |> idx
+                     |> Seq.map (makePort nodeId false))
+                div [ Class "nodetitle" ] [
+                    str node.Definition.Name
                 ]
+                div
+                    [ Class "portstack" ]
+                    (node.Definition.Outputs
+                     |> idx
+                     |> Seq.map (makePort nodeId true))
             ]
         ]
 

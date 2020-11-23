@@ -13,16 +13,47 @@ body
 .board
   flex-grow: 1
 
-.box
-  background: pink
+.node
+  // background: pink
   border: black 1px solid
-  border-radius: 15px
-  box-shadow: 0 0 1em rgba(0, 0, 0, 0.5)
+  // border-radius: 5px
+  box-shadow: 0 0 0.5em rgba(0, 0, 0, 0.2)
   box-sizing: border-box
   cursor: move
   font-family: "KaTeX_Main", serif
-  text-shadow: 15px 30px red, -15px -15px green, 15px -30px blue, -15px 15px yellow
-  padding: 20px
+  font-size: 24px
+  // text-shadow: 15px 30px red, -15px -15px green, 15px -30px blue, -15px 15px yellow
+  text-align: center
+  // padding: 10px 16px
   position: absolute
-  height: 150px
-  width: 150px
+  display: flex
+  // height: 100px
+  // width: 100px
+
+.nodetitle
+  padding: 10px 16px
+
+.portstack
+  display: flex
+  flex-direction: column
+  justify-content: center
+  align-items: center
+  width: 0px
+
+.port
+  $size: 12px
+  background: #e7e7e7
+  border: black 1px solid
+  border-radius: $size
+  height: $size
+  width: $size
+  margin: 4px 0px
+
+.port-classical
+  // border-style: double !important
+
+.port-alice
+  background: #ff6666
+
+.port-bob
+  background: #5e78ff
