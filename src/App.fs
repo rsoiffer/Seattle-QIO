@@ -115,7 +115,7 @@ let private update message (model: Board) =
         let x =
             { Definition = X
               Visibility = NodeVisibility.Normal
-              Position = { X = 0.0; Y = 50.0 } }
+              Position = { X = 0.0; Y = 200.0 } }
 
         { model with
               Nodes = model.Nodes |> Map.add nodeId x }
