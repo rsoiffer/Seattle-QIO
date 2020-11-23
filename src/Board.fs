@@ -4,6 +4,9 @@ open Quantum
 open Gates
 open Circuit
 
+type Position =
+    { X: float
+      Y: float }
 
 type NodeVisibility =
     | Normal
@@ -13,7 +16,8 @@ type NodeVisibility =
 
 type Node =
     { Definition: NodeDefinition
-      Visibility: NodeVisibility }
+      Visibility: NodeVisibility
+      Position: Position }
 
 
 type Wire =

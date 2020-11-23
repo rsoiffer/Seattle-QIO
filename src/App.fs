@@ -1,4 +1,4 @@
-module App
+module internal App
 
 open Board
 open Circuit
@@ -9,14 +9,19 @@ open Fable.React.Props
 open Gates
 open Levels
 open Quantum
+open ReactDraggable
 
-type Message = AddNode
+type Message =
+    | AddNode
+    | SetNodePosition of NodeId * Board.Position
 
 let private tryMax xs =
     if Seq.isEmpty xs then None else Seq.max xs |> Some
 
-let inline private draggable props children =
-    ofImport "default" "react-draggable" props children
+let private change key f map =
+    match Map.tryFind key map |> f with
+    | Some value -> Map.add key value map
+    | None -> map
 
 let board =
     { Board.StartNodeId = NodeId 0
@@ -24,15 +29,24 @@ let board =
       Board.Nodes =
           [ NodeId 0,
             { Definition = startNodeDef []
-              Visibility = Normal }
+              Visibility = Normal
+              Position = { X = 0.0; Y = 0.0 } }
             NodeId 1,
             { Definition = InitQubit
-              Visibility = Normal }
-            NodeId 2, { Definition = H; Visibility = Normal }
-            NodeId 3, { Definition = M; Visibility = Normal }
+              Visibility = Normal
+              Position = { X = 200.0; Y = 0.0 } }
+            NodeId 2,
+            { Definition = H
+              Visibility = Normal
+              Position = { X = 400.0; Y = 0.0 } }
+            NodeId 3,
+            { Definition = M
+              Visibility = Normal
+              Position = { X = 600.0; Y = 0.0 } }
             NodeId 4,
             { Definition = endNodeDef [ port Classical Any ]
-              Visibility = Normal } ]
+              Visibility = Normal
+              Position = { X = 800.0; Y = 0.0 } } ]
           |> Map.ofList
       Board.Wires =
           [ WireId 5,
@@ -52,7 +66,10 @@ let board =
               Visible = true } ]
           |> Map.ofList }
 
-let challenge = { Free = []; Costly = []; Goal = InitCbitRandom }
+let challenge =
+    { Free = []
+      Costly = []
+      Goal = InitCbitRandom }
 
 let realOutputState, oracleOutputState = testOnce challenge board
 printfn "%s" (prettyPrint realOutputState)
@@ -69,8 +86,14 @@ let private view (model: Board) dispatch =
     let nodes =
         model.Nodes
         |> Map.toSeq
-        |> Seq.map (fun (_, node) ->
-            draggable [] [
+        |> Seq.map (fun (nodeId, node) ->
+            draggable [ node.Position |> Position.ofBoard |> Position
+                        DraggableEventHandler(fun _ data ->
+                            SetNodePosition(nodeId, { X = data.x; Y = data.y })
+                            |> dispatch
+
+                            true)
+                        |> OnStop ] [
                 div [ Class "box" ] [
                     str node.Definition.Name
                 ]
@@ -92,10 +115,16 @@ let private update message (model: Board) =
 
         let x =
             { Definition = X
-              Visibility = NodeVisibility.Normal }
+              Visibility = NodeVisibility.Normal
+              Position = { X = 0.0; Y = 50.0 } }
 
         { model with
               Nodes = model.Nodes |> Map.add nodeId x }
+    | SetNodePosition (nodeId, position) ->
+        { model with
+              Nodes =
+                  model.Nodes
+                  |> change nodeId (Option.map (fun node -> { node with Position = position })) }
 
 Program.mkSimple init update view
 |> Program.withReactSynchronous "app"
