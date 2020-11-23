@@ -15,7 +15,7 @@ type DraggableData =
       lastX: float
       lastY: float }
 
-type DraggableEventHandler = delegate of Event * DraggableData -> bool
+type DraggableEventHandler = Event -> DraggableData -> bool
 
 type Position = { x: float; y: float }
 

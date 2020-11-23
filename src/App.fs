@@ -111,12 +111,12 @@ let private view (model: Board) dispatch =
 
         draggable [ Id(printNodeId nodeId)
                     node.Position |> Position.ofBoard |> Position
-                    DraggableEventHandler(fun _ data ->
+                    OnStop(fun _ data ->
                         SetNodePosition(nodeId, { X = data.x; Y = data.y })
                         |> dispatch
 
                         true)
-                    |> OnStop ] [
+                     ] [
             div [] [
                 div [ Class "box" ] [
                     str node.Definition.Name
@@ -153,7 +153,7 @@ let private update message (model: Board) =
         let x =
             { Definition = X
               Visibility = NodeVisibility.Normal
-              Position = { X = 0.0; Y = 50.0 } }
+              Position = { X = 0.0; Y = 200.0 } }
 
         { model with
               Nodes = model.Nodes |> Map.add nodeId x }
