@@ -3,6 +3,10 @@ module ReactArcher
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
+open Fable.React.Props
+
+type IArcherContainer =
+    abstract refreshScreen: unit -> unit
 
 type ArcherStyle =
     { strokeColor: string option
@@ -36,9 +40,9 @@ type Relation =
 
 type ArcherElementProps =
     | Id of string
-    | Relations of Relation[]
+    | Relations of Relation []
 
-let inline archerContainer props children =
+let inline archerContainer (props: IHTMLProp seq) children =
     ofImport "ArcherContainer" "react-archer" (keyValueList CaseRules.LowerFirst props) children
 
 let inline archerElement (props: ArcherElementProps list) children =

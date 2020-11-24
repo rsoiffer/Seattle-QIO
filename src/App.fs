@@ -84,9 +84,10 @@ let challenge =
 let init () = board
 
 let private view (model: Board) dispatch =
+    let mutable containerRef: IArcherContainer option = None
+
     let addNode =
-        button [ OnClick
-                 <| fun _ -> dispatch AddNode ] [
+        button [ OnClick <| fun _ -> dispatch AddNode ] [
             str "Add Node"
         ]
 
@@ -139,10 +140,15 @@ let private view (model: Board) dispatch =
 
     let makeNode nodeId =
         let node = model.Nodes.[nodeId]
+
         draggable [ Position(node.Position |> Position.ofBoard)
                     OnDrag(fun _ data ->
                         SetNodePosition(nodeId, { X = data.x; Y = data.y })
                         |> dispatch
+
+                        containerRef
+                        |> Option.iter (fun container -> container.refreshScreen ())
+
                         true) ] [
             div [ Class "node" ] [
                 div
@@ -169,7 +175,10 @@ let private view (model: Board) dispatch =
 
     div [ Class "app" ] [
         div [ Class "toolbar" ] [ addNode ]
-        archerContainer [ Class "board" ] [
+        archerContainer [ Class "board"
+                          Ref(fun container ->
+                                  if isNull container |> not
+                                  then containerRef <- container :?> IArcherContainer |> Some) ] [
             nodes
         ]
     ]
