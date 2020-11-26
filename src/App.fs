@@ -113,16 +113,19 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
         }
 
     let relations =
-        if isOutputPort then
-            outputWireIds (toCircuit board) nodeId
-            |> List.map (fun wireId -> board.Wires.[wireId])
-            |> List.filter (fun wire -> wire.Placement.Left.Port = portId)
-            |> List.map (fun wire ->
-                printNodePortId wire.Placement.Right.NodeId false portId
-                |> wireRelation)
-            |> List.toArray
-        else
-            [||]
+        [| if isOutputPort then
+            yield!
+                outputWireIds (toCircuit board) nodeId
+                |> Seq.map (fun wireId -> board.Wires.[wireId])
+                |> Seq.filter (fun wire -> wire.Placement.Left.Port = portId)
+                |> Seq.map (fun wire ->
+                    printNodePortId wire.Placement.Right.NodeId false portId
+                    |> wireRelation)
+
+            match board.WireCreationState with
+            | FloatingRight (outputId, _) when outputId = { NodeId = nodeId; Port = portId } ->
+                yield wireRelation "floating-wire"
+            | _ -> () |]
 
     archerElement [ Id(printNodePortId nodeId isOutputPort portId)
                     Relations relations ] [
@@ -174,7 +177,7 @@ let private updateFloatingWire state (event: MouseEvent) =
     match state with
     | FloatingLeft (inputId, _) -> FloatingLeft(inputId, position)
     | FloatingRight (outputId, _) -> FloatingRight(outputId, position)
-    | _ -> state
+    | NotDragging -> NotDragging
 
 let private view (board: Board) dispatch =
     let containerRef: IArcherContainer option ref = ref None
@@ -186,19 +189,24 @@ let private view (board: Board) dispatch =
         |> div []
 
     let floatingWire =
-        match board.WireCreationState with
-        | FloatingLeft (inputId, position) ->
-            draggable [ Disabled true
-                        Position(Position.ofBoard position) ] [
-                div [ Class "floating-wire" ] [
-                    archerElement [ Id "floating-wire"
-                                    Relations [| printNodePortId inputId.NodeId false inputId.Port
-                                                 |> wireRelation |] ] [
-                        div [] []
-                    ]
+        let relations, position =
+            match board.WireCreationState with
+            | FloatingLeft (inputId, position) ->
+                [| printNodePortId inputId.NodeId false inputId.Port
+                   |> wireRelation |],
+                position
+            | FloatingRight (_, position) -> [||], position
+            | NotDragging -> [||], { X = 0.0; Y = 0.0 }
+
+        draggable [ Disabled true
+                    Position(Position.ofBoard position) ] [
+            div [ Class "floating-wire" ] [
+                archerElement [ Id "floating-wire"
+                                Relations relations ] [
+                    div [] []
                 ]
             ]
-        | _ -> str ""
+        ]
 
     div [ Class "app"
           OnMouseMove
@@ -245,8 +253,6 @@ let private update message (board: Board) =
                   board.Nodes
                   |> change nodeId (Option.map (fun node -> { node with Position = position })) }
     | StartWire creation ->
-        printfn "%A" creation
-
         { board with
               WireCreationState = creation }
 
