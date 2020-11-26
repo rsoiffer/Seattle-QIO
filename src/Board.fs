@@ -1,8 +1,9 @@
 module Board
 
-open Quantum
-open Gates
 open Circuit
+open Gates
+open Quantum
+open SeattleQIO.Collections
 
 type Position = { X: float; Y: float }
 
@@ -32,3 +33,37 @@ type Board =
       Nodes: Map<NodeId, Node>
       Wires: Map<WireId, Wire>
       WireCreationState: WireCreationState }
+
+module Board =
+    let addNode node board =
+        let nodeId =
+            Map.toSeq board.Nodes
+            |> Seq.map (fun ((NodeId nodeId), _) -> nodeId)
+            |> Seq.tryMax
+            |> Option.defaultValue 0
+            |> (+) 1
+            |> NodeId
+
+        { board with
+              Nodes = board.Nodes |> Map.add nodeId node }
+
+    let addWire (left: NodeOutputId) (right: NodeInputId) board =
+        let wireId =
+            Map.toSeq board.Wires
+            |> Seq.map (fun ((WireId wireId), _) -> wireId)
+            |> Seq.tryMax
+            |> Option.defaultValue 0
+            |> (+) 1
+            |> WireId
+
+        let wire =
+            { Placement = { Left = left; Right = right }
+              Visible = true }
+
+        { board with
+              Wires =
+                  board.Wires
+                  |> Map.filter (fun _ wire ->
+                      wire.Placement.Left <> left
+                      && wire.Placement.Right <> right)
+                  |> Map.add wireId wire }

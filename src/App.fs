@@ -13,20 +13,14 @@ open Levels
 open Quantum
 open ReactArcher
 open ReactDraggable
+open SeattleQIO.Collections
 open System
 
 type private Message =
     | AddNode
     | MoveNode of NodeId * Board.Position
     | StartWire of WireCreationState
-
-let private tryMax xs =
-    if Seq.isEmpty xs then None else Seq.max xs |> Some
-
-let private change key f map =
-    match Map.tryFind key map |> f with
-    | Some value -> Map.add key value map
-    | None -> map
+    | EndWire of NodeId * int
 
 let private relativeTo selector position =
     let element =
@@ -127,7 +121,7 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
                 |> Seq.map (fun wireId -> board.Wires.[wireId])
                 |> Seq.filter (fun wire -> wire.Placement.Left.Port = portId)
                 |> Seq.map (fun wire ->
-                    printNodePortId wire.Placement.Right.NodeId false portId
+                    printNodePortId wire.Placement.Right.NodeId false wire.Placement.Right.Port
                     |> wireRelation)
 
             match board.WireCreationState with
@@ -149,7 +143,8 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
                   then FloatingRight({ NodeId = nodeId; Port = portId }, position)
                   else FloatingLeft({ NodeId = nodeId; Port = portId }, position)
                   |> StartWire
-                  |> dispatch) ] []
+                  |> dispatch)
+              OnMouseUp(fun _ -> EndWire(nodeId, portId) |> dispatch) ] []
     ]
 
 let private viewNode dispatch (board: Board) (containerRef: IArcherContainer option ref) nodeId =
@@ -245,29 +240,28 @@ let private view (board: Board) dispatch =
 let private update message (board: Board) =
     match message with
     | AddNode ->
-        let nodeId =
-            Map.toSeq board.Nodes
-            |> Seq.map (fun ((NodeId nodeId), _) -> nodeId)
-            |> tryMax
-            |> Option.defaultValue 0
-            |> (+) 1
-            |> NodeId
-
-        let x =
+        board
+        |> Board.addNode
             { Definition = X
               Visibility = NodeVisibility.Normal
               Position = { X = 0.0; Y = 200.0 } }
-
-        { board with
-              Nodes = board.Nodes |> Map.add nodeId x }
     | MoveNode (nodeId, position) ->
         { board with
               Nodes =
                   board.Nodes
-                  |> change nodeId (Option.map (fun node -> { node with Position = position })) }
+                  |> Map.change nodeId (Option.map (fun node -> { node with Position = position })) }
     | StartWire creation ->
         { board with
               WireCreationState = creation }
+    | EndWire (nodeId, portId) ->
+        match board.WireCreationState with
+        | FloatingLeft (inputId, _) ->
+            board
+            |> Board.addWire { NodeId = nodeId; Port = portId } inputId
+        | FloatingRight (outputId, _) ->
+            board
+            |> Board.addWire outputId { NodeId = nodeId; Port = portId }
+        | NotDragging -> board
 
 Program.mkSimple (fun () -> initialBoard) update view
 |> Program.withReactSynchronous "app"
