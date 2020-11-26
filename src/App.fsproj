@@ -5,6 +5,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="style.sass" />
+    <Compile Include="React\Archer.fs" />
+    <Compile Include="React\Draggable.fs" />
     <Compile Include="Complex.fs" />
     <Compile Include="Collections.fs" />
     <Compile Include="SparseVector.fs" />
@@ -13,8 +15,6 @@
     <Compile Include="Circuit.fs" />
     <Compile Include="Board.fs" />
     <Compile Include="Levels.fs" />
-    <Compile Include="ReactArcher.fs" />
-    <Compile Include="ReactDraggable.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>

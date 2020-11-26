@@ -4,8 +4,12 @@ open SeattleQIO.Circuit
 open SeattleQIO.Collections
 open SeattleQIO.Gates
 open SeattleQIO.Quantum
+open SeattleQIO.React.Draggable
 
 type Position = { X: float; Y: float }
+
+module Position =
+    let toDraggable { X = x; Y = y } = { x = x; y = y }
 
 type NodeVisibility =
     | Normal

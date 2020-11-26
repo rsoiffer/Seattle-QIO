@@ -14,8 +14,9 @@ open SeattleQIO.Collections
 open SeattleQIO.Gates
 open SeattleQIO.Levels
 open SeattleQIO.Quantum
-open SeattleQIO.ReactArcher
-open SeattleQIO.ReactDraggable
+open SeattleQIO.React
+open SeattleQIO.React.Archer
+open SeattleQIO.React.Draggable
 
 type private Message =
     | AddNode
@@ -96,7 +97,7 @@ let private wireRelation targetId =
       sourceAnchor = Right
       label = None
       style =
-          { ArcherStyle.defaults with
+          { Archer.Style.defaults with
                 strokeColor = Some "blue"
                 strokeWidth = Some 2.0
                 endShape = Some(upcast {| arrow = {| arrowLength = 0 |} |}) }
@@ -131,8 +132,8 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
                 yield wireRelation "floating-wire"
             | _ -> () |]
 
-    archerElement [ Id(printNodePortId nodeId isOutputPort portId)
-                    Relations relations ] [
+    Archer.element [ Id(printNodePortId nodeId isOutputPort portId)
+                     Relations relations ] [
         div [ Class(String.Join(" ", classes))
               OnMouseDown(fun event ->
                   event.preventDefault ()
@@ -154,7 +155,7 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
                   |> dispatch) ] []
     ]
 
-let private viewNode dispatch (board: Board) (containerRef: IArcherContainer option ref) nodeId =
+let private viewNode dispatch (board: Board) (containerRef: IContainer option ref) nodeId =
     let node = board.Nodes.[nodeId]
 
     draggable [ Cancel ".port"
@@ -166,7 +167,7 @@ let private viewNode dispatch (board: Board) (containerRef: IArcherContainer opt
                     |> Option.iter (fun container -> container.refreshScreen ())
 
                     true)
-                Position(node.Position |> Position.ofBoard) ] [
+                Position(Position.toDraggable node.Position) ] [
         div [ Class "node" ] [
             div
                 [ Class "portstack" ]
@@ -195,7 +196,7 @@ let private updateFloatingWire state (event: MouseEvent) =
     | NotDragging -> NotDragging
 
 let private view (board: Board) dispatch =
-    let containerRef: IArcherContainer option ref = ref None
+    let containerRef: IContainer option ref = ref None
 
     let nodes =
         board.Nodes
@@ -214,10 +215,10 @@ let private view (board: Board) dispatch =
             | NotDragging -> [||], { X = 0.0; Y = 0.0 }
 
         draggable [ Disabled true
-                    Position(Position.ofBoard position) ] [
+                    Position(Position.toDraggable position) ] [
             div [ Class "floating-wire" ] [
-                archerElement [ Id "floating-wire"
-                                Relations relations ] [
+                Archer.element [ Id "floating-wire"
+                                 Relations relations ] [
                     div [] []
                 ]
             ]
@@ -234,11 +235,10 @@ let private view (board: Board) dispatch =
                 str "Add Node"
             ]
         ]
-        archerContainer [ Class "board"
-                          Ref(fun container ->
-                                  if isNull container |> not then
-                                      containerRef
-                                      := container :?> IArcherContainer |> Some) ] [
+        Archer.container [ Class "board"
+                           Ref(fun container ->
+                                   if isNull container |> not
+                                   then containerRef := container :?> IContainer |> Some) ] [
             nodes
             floatingWire
         ]

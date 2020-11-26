@@ -1,10 +1,9 @@
-﻿module internal SeattleQIO.ReactDraggable
+﻿module internal SeattleQIO.React.Draggable
 
 open Browser.Types
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
-open SeattleQIO.Board
 
 type DraggableData =
     { node: HTMLElement
@@ -18,9 +17,6 @@ type DraggableData =
 type DraggableEventHandler = Event -> DraggableData -> bool
 
 type Position = { x: float; y: float }
-
-module Position =
-    let ofBoard { X = x; Y = y } = { x = x; y = y }
 
 type DraggableProp =
     | Cancel of string
