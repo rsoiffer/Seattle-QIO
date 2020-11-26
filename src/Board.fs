@@ -17,15 +17,14 @@ type Node =
       Visibility: NodeVisibility
       Position: Position }
 
-
 type Wire =
     { Placement: WirePlacement
       Visible: bool }
 
 type WireCreationState =
     | NotDragging
-    | FloatingRight of NodeOutputId
-    | FloatingLeft of NodeInputId
+    | FloatingRight of NodeOutputId * Position
+    | FloatingLeft of NodeInputId * Position
 
 type Board =
     { StartNodeId: NodeId

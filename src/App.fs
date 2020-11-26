@@ -1,6 +1,7 @@
 module internal App
 
 open Board
+open Browser.Types
 open Circuit
 open Elmish
 open Elmish.React
@@ -86,8 +87,8 @@ let private challenge =
 let private printNodePortId (NodeId nodeId) isOutput port =
     sprintf "Node%iType%bPort%i" nodeId isOutput port
 
-let private viewWire portId wire =
-    { targetId = printNodePortId wire.Placement.Right.NodeId false portId
+let private wireRelation targetId =
+    { targetId = targetId
       targetAnchor = Left
       sourceAnchor = Right
       label = None
@@ -116,7 +117,9 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
             outputWireIds (toCircuit board) nodeId
             |> List.map (fun wireId -> board.Wires.[wireId])
             |> List.filter (fun wire -> wire.Placement.Left.Port = portId)
-            |> List.map (viewWire portId)
+            |> List.map (fun wire ->
+                printNodePortId wire.Placement.Right.NodeId false portId
+                |> wireRelation)
             |> List.toArray
         else
             [||]
@@ -124,10 +127,13 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
     archerElement [ Id(printNodePortId nodeId isOutputPort portId)
                     Relations relations ] [
         div [ Class(String.Join(" ", classes))
-              OnMouseDown(fun _ ->
+              OnMouseDown(fun event ->
+                  event.preventDefault ()
+                  let position = { X = event.clientX; Y = event.clientY }
+
                   if isOutputPort
-                  then FloatingRight { NodeId = nodeId; Port = portId }
-                  else FloatingLeft { NodeId = nodeId; Port = portId }
+                  then FloatingRight({ NodeId = nodeId; Port = portId }, position)
+                  else FloatingLeft({ NodeId = nodeId; Port = portId }, position)
                   |> StartWire
                   |> dispatch) ] []
     ]
@@ -162,6 +168,14 @@ let private viewNode dispatch (board: Board) (containerRef: IArcherContainer opt
         ]
     ]
 
+let private updateFloatingWire state (event: MouseEvent) =
+    let position = { X = event.clientX; Y = event.clientY }
+
+    match state with
+    | FloatingLeft (inputId, _) -> FloatingLeft(inputId, position)
+    | FloatingRight (outputId, _) -> FloatingRight(outputId, position)
+    | _ -> state
+
 let private view (board: Board) dispatch =
     let containerRef: IArcherContainer option ref = ref None
 
@@ -171,7 +185,26 @@ let private view (board: Board) dispatch =
         |> Seq.map (fun (nodeId, _) -> viewNode dispatch board containerRef nodeId)
         |> div []
 
+    let floatingWire =
+        match board.WireCreationState with
+        | FloatingLeft (inputId, position) ->
+            draggable [ Disabled true
+                        Position(Position.ofBoard position) ] [
+                div [ Class "floating-wire" ] [
+                    archerElement [ Id "floating-wire"
+                                    Relations [| printNodePortId inputId.NodeId false inputId.Port
+                                                 |> wireRelation |] ] [
+                        div [] []
+                    ]
+                ]
+            ]
+        | _ -> str ""
+
     div [ Class "app"
+          OnMouseMove
+              (updateFloatingWire board.WireCreationState
+               >> StartWire
+               >> dispatch)
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
         div [ Class "toolbar" ] [
             button [ OnClick <| fun _ -> dispatch AddNode ] [
@@ -184,6 +217,7 @@ let private view (board: Board) dispatch =
                                       containerRef
                                       := container :?> IArcherContainer |> Some) ] [
             nodes
+            floatingWire
         ]
     ]
 

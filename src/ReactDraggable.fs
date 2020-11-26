@@ -24,6 +24,7 @@ module Position =
 
 type DraggableProp =
     | Cancel of string
+    | Disabled of bool
     | OnDrag of DraggableEventHandler
     | Position of Position
 
