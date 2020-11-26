@@ -23,8 +23,9 @@ module Position =
     let ofBoard { X = x; Y = y } = { x = x; y = y }
 
 type DraggableProp =
-    | Position of Position
+    | Cancel of string
     | OnDrag of DraggableEventHandler
+    | Position of Position
 
 let inline draggable props children =
     ofImport "default" "react-draggable" (keyValueList CaseRules.LowerFirst props) children

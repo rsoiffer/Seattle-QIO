@@ -4,9 +4,7 @@ open Quantum
 open Gates
 open Circuit
 
-type Position =
-    { X: float
-      Y: float }
+type Position = { X: float; Y: float }
 
 type NodeVisibility =
     | Normal

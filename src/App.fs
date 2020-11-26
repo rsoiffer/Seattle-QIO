@@ -8,13 +8,15 @@ open Fable.React
 open Fable.React.Props
 open Gates
 open Levels
-open ReactArcher
 open Quantum
+open ReactArcher
 open ReactDraggable
+open System
 
-type Message =
+type private Message =
     | AddNode
-    | SetNodePosition of NodeId * Board.Position
+    | MoveNode of NodeId * Board.Position
+    | StartWire of WireCreationState
 
 let private tryMax xs =
     if Seq.isEmpty xs then None else Seq.max xs |> Some
@@ -24,10 +26,10 @@ let private change key f map =
     | Some value -> Map.add key value map
     | None -> map
 
-let board =
-    { Board.StartNodeId = NodeId 0
-      Board.EndNodeId = NodeId 3
-      Board.Nodes =
+let private initialBoard =
+    { StartNodeId = NodeId 0
+      EndNodeId = NodeId 3
+      Nodes =
           [ NodeId 0,
             { Definition = startNodeDef []
               Visibility = Normal
@@ -53,7 +55,7 @@ let board =
               Visibility = Normal
               Position = { X = 500.0; Y = 100.0 } } ]
           |> Map.ofList
-      Board.Wires =
+      Wires =
           [ WireId 5,
             { Placement =
                   { Left = { NodeId = NodeId 1; Port = 0 }
@@ -70,9 +72,9 @@ let board =
                     Right = { NodeId = NodeId 4; Port = 0 } }
               Visible = true } ]
           |> Map.ofList
-      Board.WireCreationState = NotDragging }
+      WireCreationState = NotDragging }
 
-let challenge =
+let private challenge =
     { Free = []
       Costly = []
       Goal = InitCbitRandom }
@@ -81,113 +83,115 @@ let challenge =
 // printfn "%s" (prettyPrint realOutputState)
 // printfn "%s" (prettyPrint oracleOutputState)
 
-let init () = board
+let private printNodePortId (NodeId nodeId) isOutput port =
+    sprintf "Node%iType%bPort%i" nodeId isOutput port
 
-let private view (model: Board) dispatch =
-    let mutable containerRef: IArcherContainer option = None
+let private viewWire portId wire =
+    { targetId = printNodePortId wire.Placement.Right.NodeId false portId
+      targetAnchor = Left
+      sourceAnchor = Right
+      label = None
+      style =
+          { ArcherStyle.defaults with
+                strokeColor = Some "blue"
+                strokeWidth = Some 1 }
+          |> Some }
 
-    let addNode =
-        button [ OnClick <| fun _ -> dispatch AddNode ] [
-            str "Add Node"
-        ]
+let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
+    let node = board.Nodes.[nodeId]
 
-    let printNodePortId (NodeId nodeId) isOutput port =
-        sprintf "Node%iType%bPort%i" nodeId isOutput port
+    let port =
+        if isOutputPort then node.Definition.Outputs.[portId] else node.Definition.Inputs.[portId]
 
-    let makeWire portId wireId =
-        let rightNodeId =
-            model.Wires.[wireId].Placement.Right.NodeId
+    let classes =
+        seq {
+            yield "port"
+            if port.DataType = Classical then yield "port-classical"
+            if port.Party = Alice then yield "port-alice"
+            if port.Party = Bob then yield "port-bob"
+        }
 
-        { targetId = printNodePortId rightNodeId false portId
-          targetAnchor = Left
-          sourceAnchor = Right
-          label = None
-          style =
-              { ArcherStyle.defaults with
-                    strokeColor = Some "blue"
-                    strokeWidth = Some 1 }
-              |> Some }
+    let relations =
+        if isOutputPort then
+            outputWireIds (toCircuit board) nodeId
+            |> List.map (fun wireId -> board.Wires.[wireId])
+            |> List.filter (fun wire -> wire.Placement.Left.Port = portId)
+            |> List.map (viewWire portId)
+            |> List.toArray
+        else
+            [||]
 
-    let makePort nodeId isOutputPort portId =
-        let node = model.Nodes.[nodeId]
+    archerElement [ Id(printNodePortId nodeId isOutputPort portId)
+                    Relations relations ] [
+        div [ Class(String.Join(" ", classes))
+              OnMouseDown(fun _ ->
+                  if isOutputPort
+                  then FloatingRight { NodeId = nodeId; Port = portId }
+                  else FloatingLeft { NodeId = nodeId; Port = portId }
+                  |> StartWire
+                  |> dispatch) ] []
+    ]
 
-        let port =
-            if isOutputPort then node.Definition.Outputs.[portId] else node.Definition.Inputs.[portId]
+let private viewNode dispatch (board: Board) (containerRef: IArcherContainer option ref) nodeId =
+    let node = board.Nodes.[nodeId]
 
-        let myClass =
-            System.String.Join
-                (" ",
-                 seq {
-                     yield "port"
-                     if port.DataType = Classical then yield "port-classical"
-                     if port.Party = Alice then yield "port-alice"
-                     if port.Party = Bob then yield "port-bob"
-                 })
+    draggable [ Cancel ".port"
+                OnDrag(fun _ data ->
+                    MoveNode(nodeId, { X = data.x; Y = data.y })
+                    |> dispatch
 
-        let relations =
-            if isOutputPort then
-                outputWireIds (toCircuit model) nodeId
-                |> List.filter (fun wireId -> model.Wires.[wireId].Placement.Left.Port = portId)
-                |> List.map (makeWire portId)
-                |> Array.ofList
-            else
-                [||]
+                    !containerRef
+                    |> Option.iter (fun container -> container.refreshScreen ())
 
-        archerElement [ Id(printNodePortId nodeId isOutputPort portId)
-                        Relations relations ] [
-            div [ Class myClass ] []
-        ]
-
-    let makeNode nodeId =
-        let node = model.Nodes.[nodeId]
-
-        draggable [ Position(node.Position |> Position.ofBoard)
-                    OnDrag(fun _ data ->
-                        SetNodePosition(nodeId, { X = data.x; Y = data.y })
-                        |> dispatch
-
-                        containerRef
-                        |> Option.iter (fun container -> container.refreshScreen ())
-
-                        true) ] [
-            div [ Class "node" ] [
-                div
-                    [ Class "portstack" ]
-                    (node.Definition.Inputs
-                     |> idx
-                     |> Seq.map (makePort nodeId false))
-                div [ Class "nodetitle" ] [
-                    str node.Definition.Name
-                ]
-                div
-                    [ Class "portstack" ]
-                    (node.Definition.Outputs
-                     |> idx
-                     |> Seq.map (makePort nodeId true))
+                    true)
+                Position(node.Position |> Position.ofBoard) ] [
+        div [ Class "node" ] [
+            div
+                [ Class "portstack" ]
+                (node.Definition.Inputs
+                 |> idx
+                 |> Seq.map (viewPort dispatch board nodeId false))
+            div [ Class "nodetitle" ] [
+                str node.Definition.Name
             ]
+            div
+                [ Class "portstack" ]
+                (node.Definition.Outputs
+                 |> idx
+                 |> Seq.map (viewPort dispatch board nodeId true))
         ]
+    ]
+
+let private view (board: Board) dispatch =
+    let containerRef: IArcherContainer option ref = ref None
 
     let nodes =
-        model.Nodes
+        board.Nodes
         |> Map.toSeq
-        |> Seq.map (fun (nodeId, _) -> makeNode nodeId)
+        |> Seq.map (fun (nodeId, _) -> viewNode dispatch board containerRef nodeId)
         |> div []
 
-    div [ Class "app" ] [
-        div [ Class "toolbar" ] [ addNode ]
+    div [ Class "app"
+          OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
+        div [ Class "toolbar" ] [
+            button [ OnClick <| fun _ -> dispatch AddNode ] [
+                str "Add Node"
+            ]
+        ]
         archerContainer [ Class "board"
                           Ref(fun container ->
-                                  if isNull container |> not
-                                  then containerRef <- container :?> IArcherContainer |> Some) ] [
+                                  if isNull container |> not then
+                                      containerRef
+                                      := container :?> IArcherContainer |> Some) ] [
             nodes
         ]
     ]
 
-let private update message (model: Board) =
+let private update message (board: Board) =
     match message with
     | AddNode ->
         let nodeId =
-            Map.toSeq model.Nodes
+            Map.toSeq board.Nodes
             |> Seq.map (fun ((NodeId nodeId), _) -> nodeId)
             |> tryMax
             |> Option.defaultValue 0
@@ -199,14 +203,19 @@ let private update message (model: Board) =
               Visibility = NodeVisibility.Normal
               Position = { X = 0.0; Y = 200.0 } }
 
-        { model with
-              Nodes = model.Nodes |> Map.add nodeId x }
-    | SetNodePosition (nodeId, position) ->
-        { model with
+        { board with
+              Nodes = board.Nodes |> Map.add nodeId x }
+    | MoveNode (nodeId, position) ->
+        { board with
               Nodes =
-                  model.Nodes
+                  board.Nodes
                   |> change nodeId (Option.map (fun node -> { node with Position = position })) }
+    | StartWire creation ->
+        printfn "%A" creation
 
-Program.mkSimple init update view
+        { board with
+              WireCreationState = creation }
+
+Program.mkSimple (fun () -> initialBoard) update view
 |> Program.withReactSynchronous "app"
 |> Program.run
