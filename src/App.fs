@@ -1,6 +1,7 @@
 module internal App
 
 open Board
+open Browser.Dom
 open Browser.Types
 open Circuit
 open Elmish
@@ -26,6 +27,13 @@ let private change key f map =
     match Map.tryFind key map |> f with
     | Some value -> Map.add key value map
     | None -> map
+
+let private relativeTo selector position =
+    let element =
+        document.querySelector selector :?> HTMLElement
+
+    { X = position.X - element.offsetLeft
+      Y = position.Y - element.offsetTop }
 
 let private initialBoard =
     { StartNodeId = NodeId 0
@@ -132,7 +140,10 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
         div [ Class(String.Join(" ", classes))
               OnMouseDown(fun event ->
                   event.preventDefault ()
-                  let position = { X = event.clientX; Y = event.clientY }
+
+                  let position =
+                      { X = event.pageX; Y = event.pageY }
+                      |> relativeTo ".board"
 
                   if isOutputPort
                   then FloatingRight({ NodeId = nodeId; Port = portId }, position)
@@ -172,7 +183,9 @@ let private viewNode dispatch (board: Board) (containerRef: IArcherContainer opt
     ]
 
 let private updateFloatingWire state (event: MouseEvent) =
-    let position = { X = event.clientX; Y = event.clientY }
+    let position =
+        { X = event.pageX; Y = event.pageY }
+        |> relativeTo ".board"
 
     match state with
     | FloatingLeft (inputId, _) -> FloatingLeft(inputId, position)
