@@ -186,6 +186,26 @@ let private viewNode dispatch (board: Board) (containerRef: IContainer option re
         ]
     ]
 
+let private viewFloatingWire state =
+    let relations, position =
+        match state with
+        | FloatingLeft (inputId, position) ->
+            [| printNodePortId inputId.NodeId false inputId.Port
+               |> wireRelation |],
+            position
+        | FloatingRight (_, position) -> [||], position
+        | NotDragging -> [||], { X = 0.0; Y = 0.0 }
+
+    draggable [ Disabled true
+                Position(Position.toDraggable position) ] [
+        div [ Class "floating-wire" ] [
+            Archer.element [ Id "floating-wire"
+                             Relations relations ] [
+                div [] []
+            ]
+        ]
+    ]
+
 let private updateFloatingWire state (event: MouseEvent) =
     let position =
         { X = event.pageX; Y = event.pageY }
@@ -205,26 +225,6 @@ let private view (board: Board) dispatch =
         |> Seq.map (fun (nodeId, _) -> viewNode dispatch board containerRef nodeId)
         |> div []
 
-    let floatingWire =
-        let relations, position =
-            match board.WireCreationState with
-            | FloatingLeft (inputId, position) ->
-                [| printNodePortId inputId.NodeId false inputId.Port
-                   |> wireRelation |],
-                position
-            | FloatingRight (_, position) -> [||], position
-            | NotDragging -> [||], { X = 0.0; Y = 0.0 }
-
-        draggable [ Disabled true
-                    Position(Position.toDraggable position) ] [
-            div [ Class "floating-wire" ] [
-                Archer.element [ Id "floating-wire"
-                                 Relations relations ] [
-                    div [] []
-                ]
-            ]
-        ]
-
     div [ Class "app"
           OnMouseMove
               (updateFloatingWire board.WireCreationState
@@ -241,7 +241,7 @@ let private view (board: Board) dispatch =
                                    if isNull container |> not
                                    then containerRef := container :?> IContainer |> Some) ] [
             nodes
-            floatingWire
+            viewFloatingWire board.WireCreationState
         ]
     ]
 
