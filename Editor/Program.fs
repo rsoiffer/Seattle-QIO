@@ -1,4 +1,4 @@
-module internal SeattleQIO.App
+module internal SeattleQio.Editor.Program
 
 open Browser.Dom
 open Browser.Types
@@ -8,15 +8,16 @@ open Fable.React
 open Fable.React.Props
 open System
 
-open SeattleQIO.Board
-open SeattleQIO.Circuit
-open SeattleQIO.Collections
-open SeattleQIO.Gates
-open SeattleQIO.Levels
-open SeattleQIO.Quantum
-open SeattleQIO.React
-open SeattleQIO.React.Archer
-open SeattleQIO.React.Draggable
+open SeattleQio.Editor
+open SeattleQio.Editor.Board
+open SeattleQio.Editor.Collections
+open SeattleQio.Editor.Levels
+open SeattleQio.Editor.React
+open SeattleQio.Editor.React.Archer
+open SeattleQio.Editor.React.Draggable
+open SeattleQio.Simulator.Circuit
+open SeattleQio.Simulator.Gates
+open SeattleQio.Simulator.Quantum
 
 type private Message =
     | AddNode

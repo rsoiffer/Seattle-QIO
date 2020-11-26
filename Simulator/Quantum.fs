@@ -1,4 +1,4 @@
-﻿module internal SeattleQIO.Quantum
+﻿module SeattleQio.Simulator.Quantum
 
 type WireId = WireId of int
 

@@ -1,8 +1,8 @@
-module internal SeattleQIO.Gates
+module SeattleQio.Simulator.Gates
 
 #nowarn "25" "49"
 
-open SeattleQIO.Quantum
+open SeattleQio.Simulator.Quantum
 
 module GateHelpers =
     let bind (func: Bits -> PureState) =

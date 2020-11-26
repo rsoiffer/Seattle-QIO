@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>SeattleQio.Simulator</AssemblyName>
+    <RootNamespace>$(AssemblyName)</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Complex.fs" />
+    <Compile Include="SparseVector.fs" />
+    <Compile Include="Quantum.fs" />
+    <Compile Include="Gates.fs" />
+    <Compile Include="Circuit.fs" />
+  </ItemGroup>
+</Project>

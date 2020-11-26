@@ -1,4 +1,4 @@
-﻿namespace SeattleQIO.Collections
+﻿namespace SeattleQio.Editor.Collections
 
 module internal Seq =
     let tryMax xs =

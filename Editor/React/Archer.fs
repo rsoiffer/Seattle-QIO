@@ -1,4 +1,4 @@
-namespace SeattleQIO.React.Archer
+namespace SeattleQio.Editor.React.Archer
 
 open Fable.Core
 open Fable.Core.JsInterop

@@ -1,10 +1,10 @@
-module internal SeattleQIO.Board
+module internal SeattleQio.Editor.Board
 
-open SeattleQIO.Circuit
-open SeattleQIO.Collections
-open SeattleQIO.Gates
-open SeattleQIO.Quantum
-open SeattleQIO.React.Draggable
+open SeattleQio.Editor.Collections
+open SeattleQio.Editor.React.Draggable
+open SeattleQio.Simulator.Circuit
+open SeattleQio.Simulator.Gates
+open SeattleQio.Simulator.Quantum
 
 type Position = { X: float; Y: float }
 

@@ -1,7 +1,7 @@
-module internal SeattleQIO.Circuit
+module SeattleQio.Simulator.Circuit
 
-open SeattleQIO.Gates
-open SeattleQIO.Quantum
+open SeattleQio.Simulator.Gates
+open SeattleQio.Simulator.Quantum
 
 type NodeId = NodeId of int
 

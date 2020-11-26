@@ -1,4 +1,4 @@
-﻿module internal SeattleQIO.React.Draggable
+﻿module internal SeattleQio.Editor.React.Draggable
 
 open Browser.Types
 open Fable.Core

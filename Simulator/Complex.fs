@@ -1,7 +1,7 @@
 // Under the Apache 2.0 license
 // (c) Microsoft Corporation 2005-2009.
 
-namespace SeattleQIO
+namespace SeattleQio.Simulator
 
 open System
 open System.Globalization
@@ -44,10 +44,10 @@ type Complex(real: float, imaginary: float) =
                  + 0x9e3779b9)
 
 /// Complex number
-type internal complex = Complex
+type complex = Complex
 
 /// Operations for complex number in cartesian form
-module internal Complex =
+module Complex =
     /// Creates a complex number of a real part a and an imaginary part b
     let mkRect (a, b) = Complex(a, b)
 
@@ -170,7 +170,7 @@ module internal Complex =
     /// Creates a complex number of a real number (imaginary part 0)
     let ofReal r = mkRect (r, 0.)
 
-type internal Complex with
+type Complex with
     static member Create(a, b) = Complex.mkRect (a, b)
     static member CreatePolar(a, b) = Complex.mkPolar (a, b)
     member x.Magnitude = Complex.magnitude x
@@ -199,5 +199,5 @@ type internal Complex with
     static member (*)(a, b) = Complex.muls a b
 
 [<AutoOpen>]
-module internal ComplexTopLevelOperators =
+module ComplexTopLevelOperators =
     let complex x y = Complex.mkRect (x, y)

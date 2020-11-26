@@ -8,7 +8,7 @@ const path = require("path");
 module.exports = {
   mode: "development",
   entry: {
-    app: [ "./src/App.fsproj", "./src/style.sass" ]
+    app: ["./Editor/Editor.fsproj", "./Editor/style.sass"]
   },
   output: {
     path: path.join(__dirname, "./public"),
@@ -30,11 +30,11 @@ module.exports = {
       },
       {
         test: /\.sass$/,
-        use: [ "style-loader", "css-loader", "sass-loader" ]
+        use: ["style-loader", "css-loader", "sass-loader"]
       },
       {
         test: /\.(ttf|woff|woff2)$/,
-        use: [ "file-loader" ]
+        use: ["file-loader"]
       }
     ]
   }

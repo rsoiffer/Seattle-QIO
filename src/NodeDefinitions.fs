@@ -1,4 +1,0 @@
-module NodeDefinitions
-
-open Quantum
-

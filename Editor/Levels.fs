@@ -1,9 +1,10 @@
-module internal SeattleQIO.Levels
+module internal SeattleQio.Editor.Levels
 
-open SeattleQIO.Board
-open SeattleQIO.Circuit
-open SeattleQIO.Gates
-open SeattleQIO.Quantum
+open SeattleQio.Editor.Board
+open SeattleQio.Simulator
+open SeattleQio.Simulator.Circuit
+open SeattleQio.Simulator.Gates
+open SeattleQio.Simulator.Quantum
 
 type Challenge =
     { Free: NodeDefinition list

@@ -1,8 +1,8 @@
-namespace SeattleQIO
+namespace SeattleQio.Simulator
 
 type SparseVector<'a when 'a: comparison> = private InitSparseVector of Map<'a, Complex>
 
-module internal SparseVector =
+module SparseVector =
     let read k (InitSparseVector s) =
         Option.defaultValue Complex.zero (Map.tryFind k s)
 
@@ -55,7 +55,7 @@ module internal SparseVector =
 
 open SparseVector
 
-type internal SparseVector<'c when 'c: comparison> with
+type SparseVector<'c when 'c: comparison> with
     static member Zero = zero
 
     static member (+)(s1: SparseVector<'a>, s2: SparseVector<'a>) = sum s1 s2
