@@ -10,7 +10,7 @@ type IArcherContainer =
 
 type ArcherStyle =
     { strokeColor: string option
-      strokeWidth: int option
+      strokeWidth: float option
       strokeDashArray: int option
       noCurves: bool option
       endShape: obj option }

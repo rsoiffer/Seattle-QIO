@@ -98,7 +98,8 @@ let private wireRelation targetId =
       style =
           { ArcherStyle.defaults with
                 strokeColor = Some "blue"
-                strokeWidth = Some 1 }
+                strokeWidth = Some 2.0
+                endShape = Some(upcast {| arrow = {| arrowLength = 0 |} |}) }
           |> Some }
 
 let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
