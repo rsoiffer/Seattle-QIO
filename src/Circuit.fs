@@ -4,8 +4,14 @@ open SeattleQIO.Gates
 open SeattleQIO.Quantum
 
 type NodeId = NodeId of int
+
 type NodeOutputId = { NodeId: NodeId; Port: int }
+
 type NodeInputId = { NodeId: NodeId; Port: int }
+
+type NodeIOId =
+    | NodeInputId of NodeInputId
+    | NodeOutputId of NodeOutputId
 
 type WirePlacement =
     { Left: NodeOutputId

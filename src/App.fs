@@ -21,7 +21,7 @@ type private Message =
     | AddNode
     | MoveNode of NodeId * Board.Position
     | StartWire of WireCreationState
-    | EndWire of NodeId * int
+    | EndWire of NodeIOId
 
 let private relativeTo selector position =
     let element =
@@ -145,7 +145,12 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
                   else FloatingLeft({ NodeId = nodeId; Port = portId }, position)
                   |> StartWire
                   |> dispatch)
-              OnMouseUp(fun _ -> EndWire(nodeId, portId) |> dispatch) ] []
+              OnMouseUp(fun _ ->
+                  if isOutputPort
+                  then NodeOutputId { NodeId = nodeId; Port = portId }
+                  else NodeInputId { NodeId = nodeId; Port = portId }
+                  |> EndWire
+                  |> dispatch) ] []
     ]
 
 let private viewNode dispatch (board: Board) (containerRef: IArcherContainer option ref) nodeId =
@@ -254,15 +259,11 @@ let private update message (board: Board) =
     | StartWire creation ->
         { board with
               WireCreationState = creation }
-    | EndWire (nodeId, portId) ->
-        match board.WireCreationState with
-        | FloatingLeft (inputId, _) ->
-            board
-            |> Board.addWire { NodeId = nodeId; Port = portId } inputId
-        | FloatingRight (outputId, _) ->
-            board
-            |> Board.addWire outputId { NodeId = nodeId; Port = portId }
-        | NotDragging -> board
+    | EndWire nodeId ->
+        match nodeId, board.WireCreationState with
+        | NodeOutputId outputId, FloatingLeft (inputId, _)
+        | NodeInputId inputId, FloatingRight (outputId, _) -> board |> Board.addWire outputId inputId
+        | _ -> board
 
 Program.mkSimple (fun () -> initialBoard) update view
 |> Program.withReactSynchronous "app"
