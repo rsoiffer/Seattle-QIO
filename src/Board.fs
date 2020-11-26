@@ -1,9 +1,9 @@
-module Board
+module internal SeattleQIO.Board
 
-open Circuit
-open Gates
-open Quantum
+open SeattleQIO.Circuit
 open SeattleQIO.Collections
+open SeattleQIO.Gates
+open SeattleQIO.Quantum
 
 type Position = { X: float; Y: float }
 

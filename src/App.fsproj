@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>SeattleQIO</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="style.sass" />

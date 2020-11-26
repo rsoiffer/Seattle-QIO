@@ -1,10 +1,10 @@
-﻿module internal ReactDraggable
+﻿module internal SeattleQIO.ReactDraggable
 
-open Board
 open Browser.Types
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
+open SeattleQIO.Board
 
 type DraggableData =
     { node: HTMLElement

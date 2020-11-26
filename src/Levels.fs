@@ -1,11 +1,9 @@
-module Levels
+module internal SeattleQIO.Levels
 
-open ComplexNumbers
-open SparseVector
-open Quantum
-open Gates
-open Circuit
-open Board
+open SeattleQIO.Board
+open SeattleQIO.Circuit
+open SeattleQIO.Gates
+open SeattleQIO.Quantum
 
 type Challenge =
     { Free: NodeDefinition list
@@ -25,7 +23,9 @@ let randomPureState wireIds =
         allBits
         |> List.map (fun _ -> Complex(myRandom.NextDouble(), myRandom.NextDouble()))
 
-    let norm = r |> List.sumBy (fun a -> a.Magnitude ** 2.0)
+    let norm =
+        r |> List.sumBy (fun a -> a.Magnitude ** 2.0)
+
     r
     |> List.map (fun a -> a / Complex(sqrt norm, 0.0))
     |> List.zip allBits
@@ -66,7 +66,7 @@ let initialBoard challenge =
       Wires = Map.ofSeq []
       WireCreationState = NotDragging }
 
-let toCircuit board =
+let toCircuit (board: Board) =
     { Nodes = Map.map (fun _ node -> node.Definition.Gate) board.Nodes
       Wires = Map.map (fun _ wire -> wire.Placement) board.Wires }
 
@@ -87,6 +87,7 @@ let testOnce challenge board =
     let quantumStartWires =
         seq {
             yield WireId 0
+
             for i in idx challenge.Goal.Inputs do
                 if challenge.Goal.Inputs.[i].DataType = Quantum
                 then yield startWireIds.[i]

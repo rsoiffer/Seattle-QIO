@@ -1,13 +1,10 @@
-module Gates
+module internal SeattleQIO.Gates
 
 #nowarn "25" "49"
 
-open ComplexNumbers
-open SparseVector
-open Quantum
+open SeattleQIO.Quantum
 
 module GateHelpers =
-
     let bind (func: Bits -> PureState) =
         SparseVector.bind (fun (b1, b2) -> outer (func b1) (func b2))
 
@@ -32,11 +29,7 @@ module GateHelpers =
 
     let unitary1 in' f = unitary [ in' ] (fun [ val' ] -> f val')
 
-    let myRandom = System.Random()
-
 open GateHelpers
-
-
 
 type Gate = WireId list * WireId list -> MixedState -> MixedState
 
@@ -174,8 +167,7 @@ let gate_H: Gate =
     | [ in1 ], [ out1 ] ->
         unitary1 in1 (fun val1 ->
             (Ket [ out1, false ]
-             + Ket [ out1, true ]
-             * (if val1 then -1.0 else 1.0))
+             + Ket [ out1, true ] * (if val1 then -1.0 else 1.0))
             / sqrt 2.0)
     | _ -> failwith "wires not correct"
 

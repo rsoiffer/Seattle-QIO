@@ -1,20 +1,21 @@
-module internal App
+module internal SeattleQIO.App
 
-open Board
 open Browser.Dom
 open Browser.Types
-open Circuit
 open Elmish
 open Elmish.React
 open Fable.React
 open Fable.React.Props
-open Gates
-open Levels
-open Quantum
-open ReactArcher
-open ReactDraggable
-open SeattleQIO.Collections
 open System
+
+open SeattleQIO.Board
+open SeattleQIO.Circuit
+open SeattleQIO.Collections
+open SeattleQIO.Gates
+open SeattleQIO.Levels
+open SeattleQIO.Quantum
+open SeattleQIO.ReactArcher
+open SeattleQIO.ReactDraggable
 
 type private Message =
     | AddNode

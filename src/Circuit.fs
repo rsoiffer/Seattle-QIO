@@ -1,8 +1,7 @@
-module Circuit
+module internal SeattleQIO.Circuit
 
-open Quantum
-open Gates
-
+open SeattleQIO.Gates
+open SeattleQIO.Quantum
 
 type NodeId = NodeId of int
 type NodeOutputId = { NodeId: NodeId; Port: int }
@@ -57,4 +56,5 @@ let eval circuit initialState =
     (circuit.Nodes
      |> Seq.fold (fun s n -> evalNode circuit n.Key s)
             { State = initialState
-              Previous = Set.empty }).State
+              Previous = Set.empty })
+        .State

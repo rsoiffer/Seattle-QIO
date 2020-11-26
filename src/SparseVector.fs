@@ -1,13 +1,8 @@
-module SparseVector
-
-open ComplexNumbers
+namespace SeattleQIO
 
 type SparseVector<'a when 'a: comparison> = private InitSparseVector of Map<'a, Complex>
 
-
-
-module SparseVector =
-
+module internal SparseVector =
     let read k (InitSparseVector s) =
         Option.defaultValue Complex.zero (Map.tryFind k s)
 
@@ -24,7 +19,6 @@ module SparseVector =
 
     let toSeq (InitSparseVector s) = s |> Map.toSeq
 
-
     let ofSeqF s =
         s
         |> Seq.map (fun (k, v) -> k, Complex(v, 0.0))
@@ -36,14 +30,12 @@ module SparseVector =
 
     let mapWeights (f: _ -> _) = mapBoth (fun (k, v) -> k, f v)
 
-
     let zero = InitSparseVector Map.empty
 
     let sum s1 s2 =
         Seq.concat [ toSeq s1; toSeq s2 ] |> ofSeq
 
     let mul mult = mapWeights (fun v -> v * mult)
-
 
     let bind (channel: _ -> SparseVector<_>) =
         toSeq
@@ -63,8 +55,7 @@ module SparseVector =
 
 open SparseVector
 
-type SparseVector<'c when 'c: comparison> with
-
+type internal SparseVector<'c when 'c: comparison> with
     static member Zero = zero
 
     static member (+)(s1: SparseVector<'a>, s2: SparseVector<'a>) = sum s1 s2

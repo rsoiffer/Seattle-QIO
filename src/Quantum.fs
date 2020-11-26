@@ -1,8 +1,4 @@
-﻿module Quantum
-
-open ComplexNumbers
-open SparseVector
-
+﻿module internal SeattleQIO.Quantum
 
 type WireId = WireId of int
 
@@ -11,6 +7,7 @@ type Bits = Bits of Map<WireId, bool>
 let removeAll wires (Bits bits) =
     for w in wires do
         if not (Map.containsKey w bits) then failwith "Removing invalid wire"
+
     Seq.fold (fun b w -> Map.remove w b) bits wires
     |> Bits
 
@@ -35,10 +32,9 @@ let rec allPossibleBits =
                 yield Map.add head true others |> Bits
         }
 
-
 type PureState = SparseVector<Bits>
-type MixedState = SparseVector<Bits * Bits>
 
+type MixedState = SparseVector<Bits * Bits>
 
 let outer ket bra =
     SparseVector.tensor ket (SparseVector.mapWeights Complex.conjugate bra)
@@ -57,8 +53,8 @@ let trace rho =
     |> SparseVector.sumBy (fun (b1, b2) -> if b1 = b2 then Complex.one else Complex.zero)
 
 let Ket x = SparseVector.ofSeq [ B x, Complex.one ]
-let Rho x = outer (Ket x) (Ket x)
 
+let Rho x = outer (Ket x) (Ket x)
 
 let prettyPrint (rho: MixedState) =
     let wires =

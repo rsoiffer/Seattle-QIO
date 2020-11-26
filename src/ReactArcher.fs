@@ -1,4 +1,4 @@
-module ReactArcher
+module internal SeattleQIO.ReactArcher
 
 open Fable.Core
 open Fable.Core.JsInterop
