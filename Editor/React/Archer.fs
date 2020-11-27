@@ -11,7 +11,7 @@ type internal IContainer =
 type internal Style =
     { strokeColor: string option
       strokeWidth: float option
-      strokeDashArray: int option
+      strokeDasharray: string option
       noCurves: bool option
       endShape: obj option }
 
@@ -19,7 +19,7 @@ module internal Style =
     let defaults =
         { strokeColor = None
           strokeWidth = None
-          strokeDashArray = None
+          strokeDasharray = None
           noCurves = None
           endShape = None }
 

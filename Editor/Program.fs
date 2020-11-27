@@ -92,7 +92,7 @@ let private challenge =
 let private printNodePortId (NodeId nodeId) isOutput port =
     sprintf "Node%iType%bPort%i" nodeId isOutput port
 
-let private wireRelation targetId =
+let private wireRelation dataType targetId =
     { targetId = targetId
       targetAnchor = Left
       sourceAnchor = Right
@@ -101,6 +101,7 @@ let private wireRelation targetId =
           { Archer.Style.defaults with
                 strokeColor = Some "blue"
                 strokeWidth = Some 2.0
+                strokeDasharray = if dataType = Classical then Some "5,5" else None
                 endShape = Some(upcast {| arrow = {| arrowLength = 0 |} |}) }
           |> Some }
 
@@ -120,17 +121,17 @@ let private viewPort dispatch (board: Board) nodeId isOutputPort portId =
 
     let relations =
         [| if isOutputPort then
-            yield!
-                outputWireIds (toCircuit board) nodeId
-                |> Seq.map (fun wireId -> board.Wires.[wireId])
-                |> Seq.filter (fun wire -> wire.Placement.Left.Port = portId)
-                |> Seq.map (fun wire ->
-                    printNodePortId wire.Placement.Right.NodeId false wire.Placement.Right.Port
-                    |> wireRelation)
+            yield! outputWireIds (toCircuit board) nodeId
+                   |> Seq.map (fun wireId -> board.Wires.[wireId])
+                   |> Seq.filter (fun wire -> wire.Placement.Left.Port = portId)
+                   |> Seq.map (fun wire ->
+                       printNodePortId wire.Placement.Right.NodeId false wire.Placement.Right.Port
+                       |> wireRelation
+                           (Board.port wire.Placement.Right.NodeId wire.Placement.Right.Port true board).DataType)
 
             match board.WireCreationState with
             | FloatingRight (outputId, _) when outputId = { NodeId = nodeId; Port = portId } ->
-                yield wireRelation "floating-wire"
+                yield wireRelation (Board.port nodeId portId true board).DataType "floating-wire"
             | _ -> () |]
 
     Archer.element [ Id(printNodePortId nodeId isOutputPort portId)
@@ -186,12 +187,12 @@ let private viewNode dispatch (board: Board) (containerRef: IContainer option re
         ]
     ]
 
-let private viewFloatingWire state =
+let private viewFloatingWire board  =
     let relations, position =
-        match state with
+        match board.WireCreationState with
         | FloatingLeft (inputId, position) ->
             [| printNodePortId inputId.NodeId false inputId.Port
-               |> wireRelation |],
+               |> wireRelation (Board.port inputId.NodeId inputId.Port false board).DataType |],
             position
         | FloatingRight (_, position) -> [||], position
         | NotDragging -> [||], { X = 0.0; Y = 0.0 }
@@ -232,7 +233,8 @@ let private view (board: Board) dispatch =
                >> dispatch)
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
         div [ Class "toolbar" ] [
-            button [ OnClick <| fun _ -> dispatch AddNode ] [
+            button [ OnClick
+                     <| fun _ -> dispatch AddNode ] [
                 str "Add Node"
             ]
         ]
@@ -241,7 +243,7 @@ let private view (board: Board) dispatch =
                                    if isNull container |> not
                                    then containerRef := container :?> IContainer |> Some) ] [
             nodes
-            viewFloatingWire board.WireCreationState
+            viewFloatingWire board
         ]
     ]
 

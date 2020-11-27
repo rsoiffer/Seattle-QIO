@@ -68,6 +68,11 @@ module Board =
               Wires =
                   board.Wires
                   |> Map.filter (fun _ wire ->
-                      wire.Placement.Left <> left
+                      wire.Placement.Left
+                      <> left
                       && wire.Placement.Right <> right)
                   |> Map.add wireId wire }
+
+    let port nodeId portId isInput board =
+        let nodeDef = board.Nodes.[nodeId].Definition
+        if isInput then nodeDef.Inputs.[portId] else nodeDef.Outputs.[portId]
