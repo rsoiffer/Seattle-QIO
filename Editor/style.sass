@@ -12,6 +12,11 @@ body
   display: flex
   flex-direction: column
 
+.palette
+  background-color: #eee
+  border-bottom: black 1px solid
+  display: flex
+
 .board
   flex-grow: 1
 
@@ -24,8 +29,13 @@ body
   display: flex
   font-family: "KaTeX_Main", serif
   font-size: 24px
-  position: absolute
   text-align: center
+
+  .palette &
+    margin-right: 50px
+
+  .board &
+    position: absolute
 
 .nodetitle
   padding: 10px 16px
@@ -47,10 +57,12 @@ body
   background: #e7e7e7
   border: black 1px solid
   box-sizing: border-box
-  cursor: pointer
   height: $port-size
   margin: 4px 0
   width: $port-size
+
+  .board &
+    cursor: pointer
 
 .port-classical
   border-radius: $port-size

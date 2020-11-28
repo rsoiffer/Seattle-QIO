@@ -11,6 +11,10 @@ type Challenge =
       Costly: (NodeDefinition * int) list
       Goal: NodeDefinition }
 
+type Level =
+    { Challenge: Challenge
+      Board: Board }
+
 let private myRandom = System.Random()
 
 let randomClassicalState wireIds =
@@ -31,7 +35,6 @@ let randomPureState wireIds =
     |> List.map (fun a -> a / Complex(sqrt norm, 0.0))
     |> List.zip allBits
     |> SparseVector.ofSeq
-
 
 let startNodeDef inputs =
     { Name = "Input"
