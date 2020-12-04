@@ -226,7 +226,8 @@ let private updateFloatingWire state (event: MouseEvent) =
 
 let private viewPaletteNode dispatch (node, available) =
     div [] [
-        draggable [ Position { x = 0.0; y = 0.0 }
+        draggable [ Disabled(available |> Option.exists ((>=) 0))
+                    Position { x = 0.0; y = 0.0 }
                     OnStop(fun event data ->
                         let target = event.target :?> Element
 
