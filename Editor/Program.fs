@@ -20,7 +20,7 @@ open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
 
 type private Message =
-    | AddNode of NodeDefinition
+    | AddNode of NodeDefinition * Board.Position
     | MoveNode of NodeId * Board.Position
     | StartWire of WireCreationState
     | EndWire of NodeIOId
@@ -226,11 +226,16 @@ let private updateFloatingWire state (event: MouseEvent) =
 
 let private viewPaletteNode dispatch node =
     draggable [ Position { x = 0.0; y = 0.0 }
-                OnStop(fun event _ ->
+                OnStop(fun event data ->
                     let target = event.target :?> Element
 
+                    let position =
+                        { X = data.node.offsetLeft + data.x
+                          Y = data.node.offsetTop + data.y }
+                        |> relativeTo ".board"
+
                     if target.closest ".board" |> Option.isSome
-                    then AddNode node |> dispatch
+                    then AddNode(node, position) |> dispatch
 
                     true) ] [
         node
@@ -272,13 +277,13 @@ let private view level dispatch =
 
 let private update message level =
     match message with
-    | AddNode node ->
+    | AddNode (node, position) ->
         let board =
             level.Board
             |> Board.addNode
                 { Definition = node
                   Visibility = NodeVisibility.Normal
-                  Position = { X = 0.0; Y = 200.0 } }
+                  Position = position }
 
         { level with Board = board }
     | MoveNode (nodeId, position) ->
