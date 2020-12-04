@@ -22,6 +22,7 @@ open SeattleQio.Simulator.Quantum
 type private Message =
     | AddNode of NodeDefinition * Board.Position
     | MoveNode of NodeId * Board.Position
+    | RemoveNode of NodeId
     | StartWire of WireCreationState
     | EndWire of NodeIOId
 
@@ -187,6 +188,17 @@ let private viewNode dispatch (board: Board) (containerRef: IContainer option re
                     |> Option.iter (fun container -> container.refreshScreen ())
 
                     true)
+                OnStop(fun _ data ->
+                    let board =
+                        data.node.closest ".board" |> Option.get :?> HTMLElement
+
+                    if data.x < 0.0
+                       || data.x > board.offsetWidth
+                       || data.y < 0.0
+                       || data.y > board.offsetHeight then
+                        RemoveNode nodeId |> dispatch
+
+                    true)
                 Position(Position.toDraggable node.Position) ] [
         node.Definition
         |> viewNodeDefinition (viewDraggablePort dispatch board nodeId)
@@ -297,19 +309,25 @@ let private update message level =
 
         { level with Board = board }
     | MoveNode (nodeId, position) ->
-        let board' =
+        let board =
             { level.Board with
                   Nodes =
                       level.Board.Nodes
                       |> Map.change nodeId (Option.map (fun node -> { node with Position = position })) }
 
-        { level with Board = board' }
+        { level with Board = board }
+    | RemoveNode nodeId ->
+        let board =
+            { level.Board with
+                  Nodes = level.Board.Nodes |> Map.remove nodeId }
+
+        { level with Board = board }
     | StartWire creation ->
-        let board' =
+        let board =
             { level.Board with
                   WireCreationState = creation }
 
-        { level with Board = board' }
+        { level with Board = board }
     | EndWire nodeId ->
         match nodeId, level.Board.WireCreationState with
         | NodeOutputId outputId, FloatingLeft (inputId, _)
