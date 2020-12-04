@@ -197,8 +197,9 @@ let private viewNode dispatch (board: Board) (containerRef: IContainer option re
                        || data.y < 0.0
                        || data.y > board.offsetHeight then
                         RemoveNode nodeId |> dispatch
-
-                    true)
+                        false
+                    else
+                        true)
                 Position(Position.toDraggable node.Position) ] [
         node.Definition
         |> viewNodeDefinition (viewDraggablePort dispatch board nodeId)
