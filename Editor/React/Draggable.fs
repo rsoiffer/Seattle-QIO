@@ -22,6 +22,7 @@ type DraggableProp =
     | Cancel of string
     | Disabled of bool
     | OnDrag of DraggableEventHandler
+    | OnStop of DraggableEventHandler
     | Position of Position
 
 let inline draggable props children =

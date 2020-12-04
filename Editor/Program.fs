@@ -20,7 +20,7 @@ open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
 
 type private Message =
-    | AddNode
+    | AddNode of NodeDefinition
     | MoveNode of NodeId * Board.Position
     | StartWire of WireCreationState
     | EndWire of NodeIOId
@@ -224,16 +224,25 @@ let private updateFloatingWire state (event: MouseEvent) =
     | FloatingRight (outputId, _) -> FloatingRight(outputId, position)
     | NotDragging -> NotDragging
 
-let private viewPaletteNode node =
-    node
-    |> viewNodeDefinition (fun isOutput portId ->
-        if isOutput then node.Outputs.[portId] else node.Inputs.[portId]
-        |> viewPort [])
+let private viewPaletteNode dispatch node =
+    draggable [ Position { x = 0.0; y = 0.0 }
+                OnStop(fun event _ ->
+                    let target = event.target :?> Element
+
+                    if target.closest ".board" |> Option.isSome
+                    then AddNode node |> dispatch
+
+                    true) ] [
+        node
+        |> viewNodeDefinition (fun isOutput portId ->
+            if isOutput then node.Outputs.[portId] else node.Inputs.[portId]
+            |> viewPort [])
+    ]
 
 let private viewPalette dispatch challenge =
     challenge.Free
     @ (challenge.Costly |> List.map fst)
-    |> List.map viewPaletteNode
+    |> List.map (viewPaletteNode dispatch)
     |> div [ Class "palette" ]
 
 let private view level dispatch =
@@ -263,15 +272,15 @@ let private view level dispatch =
 
 let private update message level =
     match message with
-    | AddNode ->
-        let board' =
+    | AddNode node ->
+        let board =
             level.Board
             |> Board.addNode
-                { Definition = X
+                { Definition = node
                   Visibility = NodeVisibility.Normal
                   Position = { X = 0.0; Y = 200.0 } }
 
-        { level with Board = board' }
+        { level with Board = board }
     | MoveNode (nodeId, position) ->
         let board' =
             { level.Board with
