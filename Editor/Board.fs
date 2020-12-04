@@ -51,6 +51,17 @@ module internal Board =
         { board with
               Nodes = board.Nodes |> Map.add nodeId node }
 
+    let removeNode nodeId board: Board =
+        let wires =
+            board.Wires
+            |> Map.filter (fun _ wire ->
+                wire.Placement.Left.NodeId <> nodeId
+                && wire.Placement.Right.NodeId <> nodeId)
+
+        { board with
+              Nodes = board.Nodes |> Map.remove nodeId
+              Wires = wires }
+
     let addWire (left: NodeOutputId) (right: NodeInputId) board =
         let wireId =
             Map.toSeq board.Wires

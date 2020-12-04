@@ -317,11 +317,8 @@ let private update message level =
 
         { level with Board = board }
     | RemoveNode nodeId ->
-        let board =
-            { level.Board with
-                  Nodes = level.Board.Nodes |> Map.remove nodeId }
-
-        { level with Board = board }
+        { level with
+              Board = level.Board |> Board.removeNode nodeId }
     | StartWire creation ->
         let board =
             { level.Board with
