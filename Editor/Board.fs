@@ -1,4 +1,4 @@
-module internal SeattleQio.Editor.Board
+namespace SeattleQio.Editor.Board
 
 open SeattleQio.Editor.Collections
 open SeattleQio.Editor.React.Draggable
@@ -6,39 +6,39 @@ open SeattleQio.Simulator.Circuit
 open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
 
-type Position = { X: float; Y: float }
+type internal Position = { X: float; Y: float }
 
-module Position =
+module internal Position =
     let toDraggable { X = x; Y = y } = { x = x; y = y }
 
-type NodeVisibility =
+type internal NodeVisibility =
     | Normal
     | Invisible
     | HideInputs
     | HideOutputs
 
-type Node =
+type internal Node =
     { Definition: NodeDefinition
       Visibility: NodeVisibility
       Position: Position }
 
-type Wire =
+type internal Wire =
     { Placement: WirePlacement
       Visible: bool }
 
-type WireCreationState =
+type internal WireCreationState =
     | NotDragging
     | FloatingRight of NodeOutputId * Position
     | FloatingLeft of NodeInputId * Position
 
-type Board =
+type internal Board =
     { StartNodeId: NodeId
       EndNodeId: NodeId
       Nodes: Map<NodeId, Node>
       Wires: Map<WireId, Wire>
       WireCreationState: WireCreationState }
 
-module Board =
+module internal Board =
     let addNode node board =
         let nodeId =
             Map.toSeq board.Nodes
@@ -68,11 +68,15 @@ module Board =
               Wires =
                   board.Wires
                   |> Map.filter (fun _ wire ->
-                      wire.Placement.Left
-                      <> left
+                      wire.Placement.Left <> left
                       && wire.Placement.Right <> right)
                   |> Map.add wireId wire }
 
     let port nodeId portId isInput board =
         let nodeDef = board.Nodes.[nodeId].Definition
         if isInput then nodeDef.Inputs.[portId] else nodeDef.Outputs.[portId]
+
+    let count definition board =
+        board.Nodes
+        |> Map.filter (fun _ node -> node.Definition = definition)
+        |> Map.count

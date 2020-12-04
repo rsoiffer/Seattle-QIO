@@ -46,11 +46,23 @@ type Port = { DataType: DataType; Party: Party }
 
 let port d p = { DataType = d; Party = p }
 
+[<CustomEquality; NoComparison>]
 type NodeDefinition =
     { Name: string
       Inputs: Port list
       Outputs: Port list
       Gate: Gate }
+
+    override node.Equals object =
+        match object with
+        | :? NodeDefinition as other ->
+            node.Name = other.Name
+            && node.Inputs = other.Inputs
+            && node.Outputs = other.Outputs
+        | _ -> false
+
+    override node.GetHashCode() =
+        hash (node.Name, node.Inputs, node.Outputs)
 
 
 let gate_DoNothing: Gate =

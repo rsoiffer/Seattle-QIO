@@ -224,29 +224,38 @@ let private updateFloatingWire state (event: MouseEvent) =
     | FloatingRight (outputId, _) -> FloatingRight(outputId, position)
     | NotDragging -> NotDragging
 
-let private viewPaletteNode dispatch node =
-    draggable [ Position { x = 0.0; y = 0.0 }
-                OnStop(fun event data ->
-                    let target = event.target :?> Element
+let private viewPaletteNode dispatch (node, available) =
+    div [] [
+        draggable [ Position { x = 0.0; y = 0.0 }
+                    OnStop(fun event data ->
+                        let target = event.target :?> Element
 
-                    let position =
-                        { X = data.node.offsetLeft + data.x
-                          Y = data.node.offsetTop + data.y }
-                        |> relativeTo ".board"
+                        let position =
+                            { X = data.node.offsetLeft + data.x
+                              Y = data.node.offsetTop + data.y }
+                            |> relativeTo ".board"
 
-                    if target.closest ".board" |> Option.isSome
-                    then AddNode(node, position) |> dispatch
+                        if target.closest ".board" |> Option.isSome
+                        then AddNode(node, position) |> dispatch
 
-                    true) ] [
-        node
-        |> viewNodeDefinition (fun isOutput portId ->
-            if isOutput then node.Outputs.[portId] else node.Inputs.[portId]
-            |> viewPort [])
+                        true) ] [
+            node
+            |> viewNodeDefinition (fun isOutput portId ->
+                if isOutput then node.Outputs.[portId] else node.Inputs.[portId]
+                |> viewPort [])
+        ]
+
+        available
+        |> Option.map string
+        |> Option.defaultValue "∞"
+        |> str
     ]
 
-let private viewPalette dispatch challenge =
-    challenge.Free
-    @ (challenge.Costly |> List.map fst)
+let private viewPalette dispatch level =
+    (level.Challenge.Free
+     |> List.map (fun node -> node, None))
+    @ (level.Challenge.Costly
+       |> List.map (fun (node, budget) -> node, Some(budget - Board.count node level.Board)))
     |> List.map (viewPaletteNode dispatch)
     |> div [ Class "palette" ]
 
@@ -265,7 +274,7 @@ let private view level dispatch =
                >> StartWire
                >> dispatch)
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
-        viewPalette dispatch level.Challenge
+        viewPalette dispatch level
         Archer.container [ Class "board"
                            Ref(fun container ->
                                    if isNull container |> not
