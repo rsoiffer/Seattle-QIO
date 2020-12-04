@@ -179,7 +179,8 @@ let private viewNodeDefinition viewPort (node: NodeDefinition) =
 let private viewNode dispatch (board: Board) (containerRef: IContainer option ref) nodeId =
     let node = board.Nodes.[nodeId]
 
-    draggable [ Cancel ".port"
+    draggable [ Key(string nodeId)
+                Cancel ".port"
                 OnDrag(fun _ data ->
                     MoveNode(nodeId, { X = data.x; Y = data.y })
                     |> dispatch

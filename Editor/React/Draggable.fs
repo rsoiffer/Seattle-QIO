@@ -21,6 +21,7 @@ type Position = { x: float; y: float }
 type DraggableProp =
     | Cancel of string
     | Disabled of bool
+    | Key of string
     | OnDrag of DraggableEventHandler
     | OnStop of DraggableEventHandler
     | Position of Position
