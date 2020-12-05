@@ -300,10 +300,12 @@ let private view model dispatch =
         |> div []
 
     div [ Class "app"
-          OnMouseMove
-              (updateFloatingWire model.Level.Board.WireCreationState
-               >> StartWire
-               >> dispatch)
+          OnMouseMove(fun event ->
+              if model.Level.Board.WireCreationState <> NotDragging then
+                  event
+                  |> updateFloatingWire model.Level.Board.WireCreationState
+                  |> StartWire
+                  |> dispatch)
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
         viewPalette dispatch model.Level
         Archer.container [ Class "board"
