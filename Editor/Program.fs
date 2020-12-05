@@ -15,6 +15,7 @@ open SeattleQio.Editor.Levels
 open SeattleQio.Editor.React
 open SeattleQio.Editor.React.Archer
 open SeattleQio.Editor.React.Draggable
+open SeattleQio.Simulator
 open SeattleQio.Simulator.Circuit
 open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
@@ -286,7 +287,10 @@ let private viewPalette dispatch level =
 let private viewEvaluation dispatch evaluation =
     let message =
         match evaluation with
-        | Ok (state1, state2) -> if state1 = state2 then "equal" else "not equal"
+        | Ok (state1, state2) ->
+            if state1 |> SparseVector.approximately 1e-3 state2
+            then "equal"
+            else "not equal"
         | Error message -> message
 
     div [ Class "evaluation" ] [

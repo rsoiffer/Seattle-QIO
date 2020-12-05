@@ -1,9 +1,9 @@
 namespace SeattleQio.Simulator
 
-type SparseVector<'a when 'a: comparison> = private InitSparseVector of Map<'a, Complex>
+type SparseVector<'a when 'a: comparison> = private SparseVector of Map<'a, Complex>
 
 module SparseVector =
-    let read k (InitSparseVector s) =
+    let read k (SparseVector s) =
         Option.defaultValue Complex.zero (Map.tryFind k s)
 
     let ofSeq s =
@@ -15,9 +15,9 @@ module SparseVector =
                 | None -> v
 
             if Complex.abs v2 > 1e-12 then Map.add k v2 m else Map.remove k m) Map.empty
-        |> InitSparseVector
+        |> SparseVector
 
-    let toSeq (InitSparseVector s) = s |> Map.toSeq
+    let toSeq (SparseVector s) = s |> Map.toSeq
 
     let ofSeqF s =
         s
@@ -30,7 +30,7 @@ module SparseVector =
 
     let mapWeights (f: _ -> _) = mapBoth (fun (k, v) -> k, f v)
 
-    let zero = InitSparseVector Map.empty
+    let zero = SparseVector Map.empty
 
     let sum s1 s2 =
         Seq.concat [ toSeq s1; toSeq s2 ] |> ofSeq
@@ -52,6 +52,19 @@ module SparseVector =
                     yield (k1, k2), v1 * v2
         }
         |> ofSeq
+
+    let approximately epsilon (SparseVector s1) (SparseVector s2) =
+        let keys =
+            Map.toSeq s1
+            |> Seq.map fst
+            |> Seq.append (Map.toSeq s2 |> Seq.map fst)
+            |> Set.ofSeq
+
+        keys
+        |> Set.forall (fun key ->
+            match Map.tryFind key s1, Map.tryFind key s2 with
+            | Some value1, Some value2 -> Complex.abs (value1 - value2) <= epsilon
+            | _ -> false)
 
 open SparseVector
 
