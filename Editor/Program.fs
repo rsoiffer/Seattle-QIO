@@ -20,9 +20,7 @@ open SeattleQio.Simulator.Circuit
 open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
 
-type private Model =
-    { Level: Level
-      Evaluation: Result<MixedState * MixedState, string> }
+type private Model = { Level: Level; Evaluation: string }
 
 type private Message =
     | AddNode of NodeDefinition * Board.Position
@@ -98,7 +96,7 @@ let private initialLevel =
 
 let private init () =
     { Level = initialLevel
-      Evaluation = Error "not evaluated yet" }
+      Evaluation = "not evaluated yet" }
 
 // let realOutputState, oracleOutputState = testOnce challenge board
 // printfn "%s" (prettyPrint realOutputState)
@@ -285,19 +283,11 @@ let private viewPalette dispatch level =
     |> div [ Class "palette" ]
 
 let private viewEvaluation dispatch evaluation =
-    let message =
-        match evaluation with
-        | Ok (state1, state2) ->
-            if state1 |> SparseVector.approximately 1e-3 state2
-            then "equal"
-            else "not equal"
-        | Error message -> message
-
     div [ Class "evaluation" ] [
         button [ OnClick <| fun _ -> dispatch Evaluate ] [
             str "Evaluate"
         ]
-        str message
+        str evaluation
     ]
 
 let private view model dispatch =
@@ -374,8 +364,12 @@ let private update message model =
     | Evaluate ->
         let evaluation =
             try
-                testOnce model.Level |> Ok
-            with ex -> Error ex.Message
+                let state1, state2 = testOnce model.Level
+
+                if state1 |> SparseVector.approximately 1e-3 state2
+                then "equal"
+                else "not equal"
+            with ex -> ex.Message
 
         { model with Evaluation = evaluation }
 
