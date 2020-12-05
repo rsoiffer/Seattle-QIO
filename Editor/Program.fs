@@ -41,7 +41,7 @@ let private relativeTo selector position =
 
 let private initialBoard =
     { StartNodeId = NodeId 0
-      EndNodeId = NodeId 3
+      EndNodeId = NodeId 4
       Nodes =
           [ NodeId 0,
             { Definition = startNodeDef []
