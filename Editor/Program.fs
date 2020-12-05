@@ -19,12 +19,17 @@ open SeattleQio.Simulator.Circuit
 open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
 
+type private Model =
+    { Level: Level
+      Evaluation: Result<MixedState * MixedState, string> }
+
 type private Message =
     | AddNode of NodeDefinition * Board.Position
     | MoveNode of NodeId * Board.Position
     | RemoveNode of NodeId
     | StartWire of WireCreationState
     | EndWire of NodeIOId
+    | Evaluate
 
 let private relativeTo selector position =
     let element =
@@ -81,14 +86,18 @@ let private initialBoard =
           |> Map.ofList
       WireCreationState = NotDragging }
 
-let private challenge =
+let private initialChallenge =
     { Free = [ H; M ]
       Costly = [ CNOT_AB, 1 ]
       Goal = InitCbitRandom }
 
 let private initialLevel =
-    { Challenge = challenge
+    { Challenge = initialChallenge
       Board = initialBoard }
+
+let private init () =
+    { Level = initialLevel
+      Evaluation = Error "not evaluated yet" }
 
 // let realOutputState, oracleOutputState = testOnce challenge board
 // printfn "%s" (prettyPrint realOutputState)
@@ -274,67 +283,98 @@ let private viewPalette dispatch level =
     |> List.map (viewPaletteNode dispatch)
     |> div [ Class "palette" ]
 
-let private view level dispatch =
+let private viewEvaluation dispatch evaluation =
+    let message =
+        match evaluation with
+        | Ok (state1, state2) -> if state1 = state2 then "equal" else "not equal"
+        | Error message -> message
+
+    div [ Class "evaluation" ] [
+        button [ OnClick <| fun _ -> dispatch Evaluate ] [
+            str "Evaluate"
+        ]
+        str message
+    ]
+
+let private view model dispatch =
     let containerRef: IContainer option ref = ref None
 
     let nodes =
-        level.Board.Nodes
+        model.Level.Board.Nodes
         |> Map.toSeq
-        |> Seq.map (fun (nodeId, _) -> viewNode dispatch level.Board containerRef nodeId)
+        |> Seq.map (fun (nodeId, _) -> viewNode dispatch model.Level.Board containerRef nodeId)
         |> div []
 
     div [ Class "app"
           OnMouseMove
-              (updateFloatingWire level.Board.WireCreationState
+              (updateFloatingWire model.Level.Board.WireCreationState
                >> StartWire
                >> dispatch)
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
-        viewPalette dispatch level
+        viewPalette dispatch model.Level
         Archer.container [ Class "board"
                            Ref(fun container ->
                                    if isNull container |> not
                                    then containerRef := container :?> IContainer |> Some) ] [
             nodes
-            viewFloatingWire level.Board
+            viewFloatingWire model.Level.Board
         ]
+        viewEvaluation dispatch model.Evaluation
     ]
 
-let private update message level =
+let private update message model =
     match message with
     | AddNode (node, position) ->
         let board =
-            level.Board
+            model.Level.Board
             |> Board.addNode
                 { Definition = node
                   Visibility = NodeVisibility.Normal
                   Position = position }
 
-        { level with Board = board }
+        { model with
+              Level = { model.Level with Board = board } }
     | MoveNode (nodeId, position) ->
         let board =
-            { level.Board with
+            { model.Level.Board with
                   Nodes =
-                      level.Board.Nodes
+                      model.Level.Board.Nodes
                       |> Map.change nodeId (Option.map (fun node -> { node with Position = position })) }
 
-        { level with Board = board }
+        { model with
+              Level = { model.Level with Board = board } }
     | RemoveNode nodeId ->
-        { level with
-              Board = level.Board |> Board.removeNode nodeId }
+        let board =
+            Board.removeNode nodeId model.Level.Board
+
+        { model with
+              Level = { model.Level with Board = board } }
     | StartWire creation ->
         let board =
-            { level.Board with
+            { model.Level.Board with
                   WireCreationState = creation }
 
-        { level with Board = board }
+        { model with
+              Level = { model.Level with Board = board } }
     | EndWire nodeId ->
-        match nodeId, level.Board.WireCreationState with
+        match nodeId, model.Level.Board.WireCreationState with
         | NodeOutputId outputId, FloatingLeft (inputId, _)
         | NodeInputId inputId, FloatingRight (outputId, _) ->
-            { level with
-                  Board = level.Board |> Board.addWire outputId inputId }
-        | _ -> level
+            let board =
+                model.Level.Board
+                |> Board.addWire outputId inputId
 
-Program.mkSimple (fun () -> initialLevel) update view
+            { model with
+                  Level = { model.Level with Board = board } }
+        | _ -> model
+    | Evaluate ->
+        let evaluation =
+            try
+                testOnce model.Level |> Ok
+            with ex -> Error ex.Message
+
+        { model with Evaluation = evaluation }
+
+Program.mkSimple init update view
 |> Program.withReactSynchronous "app"
 |> Program.run

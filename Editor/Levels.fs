@@ -11,9 +11,7 @@ type Challenge =
       Costly: (NodeDefinition * int) list
       Goal: NodeDefinition }
 
-type Level =
-    { Challenge: Challenge
-      Board: Board }
+type Level = { Challenge: Challenge; Board: Board }
 
 let private myRandom = System.Random()
 
@@ -76,15 +74,19 @@ let toCircuit (board: Board) =
 
 let idx s = seq { 0 .. Seq.length s - 1 }
 
-let testOnce challenge board =
-    let circuit = toCircuit board
-    let startWireIds = outputWireIds circuit board.StartNodeId
-    let endWireIds = inputWireIds circuit board.EndNodeId
+let testOnce level =
+    let circuit = toCircuit level.Board
+
+    let startWireIds =
+        outputWireIds circuit level.Board.StartNodeId
+
+    let endWireIds =
+        inputWireIds circuit level.Board.EndNodeId
 
     let classicalStartWires =
         seq {
-            for i in idx challenge.Goal.Inputs do
-                if challenge.Goal.Inputs.[i].DataType = Classical
+            for i in idx level.Challenge.Goal.Inputs do
+                if level.Challenge.Goal.Inputs.[i].DataType = Classical
                 then yield startWireIds.[i]
         }
 
@@ -92,8 +94,8 @@ let testOnce challenge board =
         seq {
             yield WireId 0
 
-            for i in idx challenge.Goal.Inputs do
-                if challenge.Goal.Inputs.[i].DataType = Quantum
+            for i in idx level.Challenge.Goal.Inputs do
+                if level.Challenge.Goal.Inputs.[i].DataType = Quantum
                 then yield startWireIds.[i]
         }
 
@@ -112,16 +114,16 @@ let testOnce challenge board =
     let oracleCircuit =
         { Nodes =
               Map.ofSeq [ NodeId 0, gate_DoNothing
-                          NodeId 1, challenge.Goal.Gate
+                          NodeId 1, level.Challenge.Goal.Gate
                           NodeId 2, gate_DoNothing ]
           Wires =
               Map.ofSeq
-                  (Seq.concat [ idx challenge.Goal.Inputs
+                  (Seq.concat [ idx level.Challenge.Goal.Inputs
                                 |> Seq.map (fun i ->
                                     startWireIds.[i],
                                     { Left = { NodeId = NodeId 0; Port = i }
                                       Right = { NodeId = NodeId 1; Port = i } })
-                                idx challenge.Goal.Outputs
+                                idx level.Challenge.Goal.Outputs
                                 |> Seq.map (fun i ->
                                     endWireIds.[i],
                                     { Left = { NodeId = NodeId 1; Port = i }
