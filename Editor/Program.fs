@@ -23,6 +23,7 @@ open SeattleQio.Simulator.Quantum
 type private Model = { Level: Level; Evaluation: string }
 
 type private Message =
+    | LoadLevel of Level
     | AddNode of NodeDefinition * Board.Position
     | MoveNode of NodeId * Board.Position
     | RemoveNode of NodeId
@@ -97,6 +98,11 @@ let private initialLevel =
 let private init () =
     { Level = initialLevel
       Evaluation = "not evaluated yet" }
+
+let private levels =
+    [ "Level 1", initialLevel
+      "Level 2", initialLevel
+      "Level 3", initialLevel ]
 
 // let realOutputState, oracleOutputState = testOnce challenge board
 // printfn "%s" (prettyPrint realOutputState)
@@ -290,16 +296,14 @@ let private viewEvaluation dispatch evaluation =
         str evaluation
     ]
 
-let private view model dispatch =
-    let containerRef: IContainer option ref = ref None
-
+let private viewLevel dispatch model containerRef =
     let nodes =
         model.Level.Board.Nodes
         |> Map.toSeq
         |> Seq.map (fun (nodeId, _) -> viewNode dispatch model.Level.Board containerRef nodeId)
         |> div []
 
-    div [ Class "app"
+    div [ Class "level"
           OnMouseMove(fun event ->
               if model.Level.Board.WireCreationState <> NotDragging then
                   event
@@ -318,8 +322,25 @@ let private view model dispatch =
         viewEvaluation dispatch model.Evaluation
     ]
 
+let private viewLevelSelect dispatch =
+    levels
+    |> List.map (fun (name, level) ->
+        button [ OnClick(fun _ -> LoadLevel level |> dispatch) ] [
+            str name
+        ])
+    |> div [ Class "level-select" ]
+
+let private view model dispatch =
+    let containerRef = ref None
+
+    div [ Class "app" ] [
+        viewLevelSelect dispatch
+        viewLevel dispatch model containerRef
+    ]
+
 let private update message model =
     match message with
+    | LoadLevel level -> { model with Level = level }
     | AddNode (node, position) ->
         let board =
             model.Level.Board
