@@ -181,9 +181,9 @@ let private viewDraggablePort dispatch (board: Board) nodeId isOutputPort portId
                           |> dispatch) ]
     ]
 
-let private viewNodeDefinition containerRef viewPort (node: NodeDefinition) =
+let private viewNodeDefinition container viewPort (node: NodeDefinition) =
     div [ Class "node"
-          Ref(fun element -> if isNull element then Container.refreshScreen !containerRef) ] [
+          Ref(fun element -> if isNull element then container () |> Container.refreshScreen) ] [
         div [ Class "portstack" ] (node.Inputs |> idx |> Seq.map (viewPort false))
         div [ Class "nodetitle" ] [
             str node.Name
@@ -191,7 +191,7 @@ let private viewNodeDefinition containerRef viewPort (node: NodeDefinition) =
         div [ Class "portstack" ] (node.Outputs |> idx |> Seq.map (viewPort true))
     ]
 
-let private viewNode dispatch (board: Board) containerRef nodeId =
+let private viewNode dispatch (board: Board) container nodeId =
     let node = board.Nodes.[nodeId]
 
     draggable [ Key(string nodeId)
@@ -215,7 +215,7 @@ let private viewNode dispatch (board: Board) containerRef nodeId =
                         true)
                 Position(Position.toDraggable node.Position) ] [
         node.Definition
-        |> viewNodeDefinition containerRef (viewDraggablePort dispatch board nodeId)
+        |> viewNodeDefinition container (viewDraggablePort dispatch board nodeId)
     ]
 
 let private viewFloatingWire board =
@@ -266,10 +266,12 @@ let private viewPaletteNode dispatch (node, available) =
                         then AddNode(node, position) |> dispatch
 
                         true) ] [
-            node
-            |> viewNodeDefinition (ref Container.empty) (fun isOutput portId ->
-                   if isOutput then node.Outputs.[portId] else node.Inputs.[portId]
-                   |> viewPort [])
+            viewNodeDefinition
+                (fun () -> Container.empty)
+                (fun isOutput portId ->
+                    if isOutput then node.Outputs.[portId] else node.Inputs.[portId]
+                    |> viewPort [])
+                node
         ]
 
         available
@@ -298,7 +300,7 @@ let private viewLevel dispatch model containerRef =
     let nodes =
         model.Level.Board.Nodes
         |> Map.toSeq
-        |> Seq.map (fun (nodeId, _) -> viewNode dispatch model.Level.Board containerRef nodeId)
+        |> Seq.map (fun (nodeId, _) -> viewNode dispatch model.Level.Board (fun () -> !containerRef) nodeId)
         |> div []
 
     div [ Class "level"
