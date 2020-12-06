@@ -8,6 +8,13 @@ open Fable.React.Props
 type internal IContainer =
     abstract refreshScreen: unit -> unit
 
+module internal Container =
+    let empty =
+        { new IContainer with
+            override _.refreshScreen() = () }
+
+    let refreshScreen (container: IContainer) = container.refreshScreen ()
+
 type internal Style =
     { strokeColor: string option
       strokeWidth: float option
