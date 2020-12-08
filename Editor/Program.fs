@@ -87,7 +87,8 @@ let private initialBoard =
       WireCreationState = NotDragging }
 
 let private initialChallenge =
-    { Free = [ H; M ]
+    { Description = "A quantum coin flip: measure zero or one 50% of the time."
+      Free = [ H; M ]
       Costly = [ CNOT_AB, 1 ]
       Goal = InitCbitRandom }
 
@@ -97,7 +98,7 @@ let private initialLevel =
 
 let private init () =
     { Level = initialLevel
-      Evaluation = "not evaluated yet" }
+      Evaluation = "" }
 
 let private levels =
     [ "Level 1", initialLevel
@@ -252,6 +253,11 @@ let private updateFloatingWire state (event: MouseEvent) =
 
 let private viewPaletteNode dispatch (node, available) =
     div [] [
+        available
+        |> Option.map string
+        |> Option.defaultValue "∞"
+        |> str
+
         draggable [ Disabled(available |> Option.exists ((>=) 0))
                     Position { x = 0.0; y = 0.0 }
                     OnStop(fun event data ->
@@ -273,11 +279,6 @@ let private viewPaletteNode dispatch (node, available) =
                     |> viewPort [])
                 node
         ]
-
-        available
-        |> Option.map string
-        |> Option.defaultValue "∞"
-        |> str
     ]
 
 let private viewPalette dispatch level =
@@ -296,6 +297,14 @@ let private viewEvaluation dispatch evaluation =
         str evaluation
     ]
 
+let private viewChallenge dispatch model =
+    div [ Class "challenge" ] [
+        p [] [
+            str model.Level.Challenge.Description
+        ]
+        viewEvaluation dispatch model.Evaluation
+    ]
+
 let private viewLevel dispatch model containerRef =
     let nodes =
         model.Level.Board.Nodes
@@ -311,14 +320,14 @@ let private viewLevel dispatch model containerRef =
                   |> StartWire
                   |> dispatch)
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
-        viewPalette dispatch model.Level
+        viewChallenge dispatch model
         Archer.container [ Class "board"
                            Ref(fun container ->
                                    if isNull container |> not then containerRef := container :?> IContainer) ] [
             nodes
             viewFloatingWire model.Level.Board
         ]
-        viewEvaluation dispatch model.Evaluation
+        viewPalette dispatch model.Level
     ]
 
 let private viewLevelSelect dispatch =

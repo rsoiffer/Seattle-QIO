@@ -7,7 +7,8 @@ open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
 
 type Challenge =
-    { Free: NodeDefinition list
+    { Description: string
+      Free: NodeDefinition list
       Costly: (NodeDefinition * int) list
       Goal: NodeDefinition }
 
