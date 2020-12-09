@@ -31,13 +31,6 @@ type private Message =
     | EndWire of NodeIOId
     | Evaluate
 
-let private relativeTo selector position =
-    let element =
-        document.querySelector selector :?> HTMLElement
-
-    { X = position.X - element.offsetLeft
-      Y = position.Y - element.offsetTop }
-
 let private initialBoard =
     { StartNodeId = NodeId 0
       EndNodeId = NodeId 4
@@ -111,6 +104,22 @@ let private levels =
 
 let private printNodePortId (NodeId nodeId) isOutput port =
     sprintf "Node%iType%bPort%i" nodeId isOutput port
+
+let private relativeTo selector position =
+    let element =
+        document.querySelector selector :?> HTMLElement
+
+    { X = position.X - element.offsetLeft
+      Y = position.Y - element.offsetTop }
+
+let private isWithinBoard position =
+    let board =
+        document.querySelector ".board" :?> HTMLElement
+
+    position.X > 0.0
+    && position.X < board.offsetWidth
+    && position.Y > 0.0
+    && position.Y < board.offsetHeight
 
 let private wireRelation dataType targetId =
     { targetId = targetId
@@ -203,17 +212,11 @@ let private viewNode dispatch (board: Board) container nodeId =
 
                     true)
                 OnStop(fun _ data ->
-                    let board =
-                        data.node.closest ".board" |> Option.get :?> HTMLElement
-
-                    if data.x < 0.0
-                       || data.x > board.offsetWidth
-                       || data.y < 0.0
-                       || data.y > board.offsetHeight then
-                        RemoveNode nodeId |> dispatch
-                        false
+                    if isWithinBoard { X = data.x; Y = data.y } then
+                        true
                     else
-                        true)
+                        RemoveNode nodeId |> dispatch
+                        false)
                 Position(Position.toDraggable node.Position) ] [
         node.Definition
         |> viewNodeDefinition container (viewDraggablePort dispatch board nodeId)
@@ -260,17 +263,13 @@ let private viewPaletteNode dispatch (node, available) =
 
         draggable [ Disabled(available |> Option.exists ((>=) 0))
                     Position { x = 0.0; y = 0.0 }
-                    OnStop(fun event data ->
-                        let target = event.target :?> Element
-
+                    OnStop(fun _ data ->
                         let position =
                             { X = data.node.offsetLeft + data.x
                               Y = data.node.offsetTop + data.y }
                             |> relativeTo ".board"
 
-                        if target.closest ".board" |> Option.isSome
-                        then AddNode(node, position) |> dispatch
-
+                        if isWithinBoard position then AddNode(node, position) |> dispatch
                         true) ] [
             viewNodeDefinition
                 (fun () -> Container.empty)
