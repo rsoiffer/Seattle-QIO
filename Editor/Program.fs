@@ -242,8 +242,6 @@ let private viewChallenge dispatch model =
         viewEvaluation dispatch model.Evaluation
     ]
 
-let globalContainerRef = ref Container.empty
-
 let private viewLevel dispatch model containerRef =
     let nodes =
         model.Level.Board.Nodes
@@ -261,10 +259,7 @@ let private viewLevel dispatch model containerRef =
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
         viewChallenge dispatch model
         Archer.container [ Class "board"
-                           Ref(fun container ->
-                                   if isNull container |> not then
-                                       containerRef := container :?> IContainer
-                                       globalContainerRef := container :?> IContainer) ] [
+                           Ref(fun container -> if isNull container |> not then containerRef := container :?> IContainer) ] [
             nodes
             viewFloatingWire model.Level.Board
         ]
@@ -288,7 +283,6 @@ let private view model dispatch =
     ]
 
 let private update message model =
-    Container.refreshScreen (!globalContainerRef)
     match message with
     | LoadLevel level -> { model with Level = level }
     | AddNode (node, position) ->
