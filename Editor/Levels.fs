@@ -53,12 +53,14 @@ let initialBoard challenge =
 
     let startNode =
         { Definition = startNodeDef challenge.Goal.Inputs
-          Visibility = Normal
+          InferredInputTypes = None
+          InferredOutputTypes = None
           Position = { X = 0.0; Y = 0.0 } }
 
     let endNode =
         { Definition = endNodeDef challenge.Goal.Outputs
-          Visibility = Normal
+          InferredInputTypes = None
+          InferredOutputTypes = None
           Position = { X = 200.0; Y = 0.0 } }
 
     { StartNodeId = startId
@@ -147,11 +149,13 @@ let emptyBoardFrom nodeDef =
       Nodes =
           [ NodeId 0,
             { Definition = startNodeDef nodeDef.Inputs
-              Visibility = Normal
+              InferredInputTypes = None
+              InferredOutputTypes = None
               Position = { X = 50.0; Y = 100.0 } }
             NodeId 1,
             { Definition = endNodeDef nodeDef.Outputs
-              Visibility = Normal
+              InferredInputTypes = None
+              InferredOutputTypes = None
               Position = { X = 800.0; Y = 100.0 } } ]
           |> Map.ofList
       Wires = Map.empty

@@ -65,20 +65,35 @@ let private isWithinBoard position =
     && position.Y > 0.0
     && position.Y < board.offsetHeight
 
-let private wireRelation port targetId =
+let private wireRelation inferredType targetId =
+    let color =
+        match inferredType with
+        | Some it ->
+            match it.InferredParty with
+            | Some Any -> Some "black"
+            | Some Alice -> Some "red"
+            | Some Bob -> Some "blue"
+            | None -> Some "pink"
+        | None -> Some "pink"
+
+    let dasharray =
+        match inferredType with
+        | Some it ->
+            match it.InferredDataType with
+            | Some Classical -> Some "5,5"
+            | Some Quantum -> None
+            | None -> Some "1,5"
+        | None -> Some "1,5"
+
     { targetId = targetId
       targetAnchor = Left
       sourceAnchor = Right
       label = None
       style =
           { Archer.Style.defaults with
-                strokeColor =
-                    match port.Party with
-                    | Any -> Some "black"
-                    | Alice -> Some "red"
-                    | Bob -> Some "blue"
+                strokeColor = color
                 strokeWidth = Some 2.0
-                strokeDasharray = if port.DataType = Classical then Some "5,5" else None
+                strokeDasharray = dasharray
                 endShape = Some(upcast {| arrow = {| arrowLength = 0 |} |}) }
           |> Some }
 
@@ -102,11 +117,11 @@ let private viewDraggablePort dispatch (board: Board) nodeIoId =
             |> Seq.filter (fun wire -> NodeOutputId wire.Value.Placement.Left = nodeIoId)
             |> Seq.map (fun wire ->
                 let nodeIoId = (NodeInputId wire.Value.Placement.Right)
-                wireRelation myPort (printNodePortId nodeIoId))
+                wireRelation wire.Value.InferredType (printNodePortId nodeIoId))
 
            match board.WireCreationState with
            | FloatingRight (outputId, _) when (NodeOutputId outputId) = nodeIoId ->
-               yield wireRelation myPort "floating-wire"
+               yield wireRelation (InferredType.ofPort myPort |> Some) "floating-wire"
            | _ -> () |]
 
     Archer.element [ Id(printNodePortId nodeIoId)
@@ -171,7 +186,10 @@ let private viewFloatingWire board =
         match board.WireCreationState with
         | FloatingLeft (inputId, position) ->
             [| printNodePortId (NodeInputId inputId)
-               |> wireRelation (Board.port (NodeInputId inputId) board) |],
+               |> wireRelation
+                   (Board.port (NodeInputId inputId) board
+                    |> InferredType.ofPort
+                    |> Some) |],
             position
         | FloatingRight (_, position) -> [||], position
         | NotDragging -> [||], { X = 500.0; Y = 500.0 }
@@ -298,7 +316,8 @@ let private update message model =
             model.Level.Board
             |> Board.addNode
                 { Definition = node
-                  Visibility = NodeVisibility.Normal
+                  InferredInputTypes = None
+                  InferredOutputTypes = None
                   Position = position }
 
         { model with

@@ -11,20 +11,26 @@ type internal Position = { X: float; Y: float }
 module internal Position =
     let toDraggable { X = x; Y = y } = { x = x; y = y }
 
-type internal NodeVisibility =
-    | Normal
-    | Invisible
-    | HideInputs
-    | HideOutputs
+
+type InferredType =
+    { InferredDataType: DataType option
+      InferredParty: Party option }
+
+module InferredType =
+    let ofPort port =
+        { InferredDataType = Some port.DataType
+          InferredParty = Some port.Party }
+
 
 type internal Node =
     { Definition: NodeDefinition
-      Visibility: NodeVisibility
+      InferredInputTypes: InferredType list option
+      InferredOutputTypes: InferredType list option
       Position: Position }
 
 type internal Wire =
     { Placement: WirePlacement
-      Visible: bool }
+      InferredType: InferredType option }
 
 type internal WireCreationState =
     | NotDragging
@@ -102,22 +108,6 @@ module internal Board =
                              NodeId = newNodeIds.[nodeInputId.NodeId] },
                        pos) }
 
-    let addWire (left: NodeOutputId) (right: NodeInputId) (board: Board) =
-        let wireId = WireId(myRandom.Next())
-
-        let wire =
-            { Placement = { Left = left; Right = right }
-              Visible = true }
-
-        { board with
-              Wires =
-                  board.Wires
-                  |> Map.filter (fun _ wire ->
-                      wire.Placement.Left
-                      <> left
-                      && wire.Placement.Right <> right)
-                  |> Map.add wireId wire }
-
     let port nodeIoId board =
         match nodeIoId with
         | NodeInputId nodeInputId -> board.Nodes.[nodeInputId.NodeId].Definition.Inputs.[nodeInputId.InputPort]
@@ -128,6 +118,29 @@ module internal Board =
         |> Map.filter (fun _ node -> node.Definition = definition)
         |> Map.count
 
+    let addWire (left: NodeOutputId) (right: NodeInputId) (board: Board) =
+        let wireId = WireId(myRandom.Next())
+
+        let leftPort = port (NodeOutputId left) board
+        let rightPort = port (NodeInputId right) board
+
+        let wire =
+            { Placement = { Left = left; Right = right }
+              InferredType =
+                  Some
+                      { InferredDataType =
+                            if leftPort.DataType = rightPort.DataType then Some leftPort.DataType else None
+                        InferredParty = if leftPort.Party = rightPort.Party then Some leftPort.Party else None } }
+
+        { board with
+              Wires =
+                  board.Wires
+                  |> Map.filter (fun _ wire ->
+                      wire.Placement.Left
+                      <> left
+                      && wire.Placement.Right <> right)
+                  |> Map.add wireId wire }
+
     let canAddWire (left: NodeOutputId) (right: NodeInputId) (board: Board) =
         let leftPort = port (NodeOutputId left) board
         let rightPort = port (NodeInputId right) board
@@ -135,3 +148,6 @@ module internal Board =
         && (leftPort.Party = Any
             || rightPort.Party = Any
             || leftPort.Party = rightPort.Party)
+
+    // TODO - this method should infer types for all the node inputs/outputs and wires
+    let inferTypes board: Board = board
