@@ -1,5 +1,10 @@
 ﻿@import "~katex/dist/katex.min.css"
 
+
+$my-gray: #e5e5e5
+$my-orange: #fca311
+$my-blue: #14213D
+
 $port-size: 18px
 
 html, body, #app, .app
@@ -12,7 +17,7 @@ body
   display: flex
 
 .challenge
-  background-color: #eee
+  background-color: $my-gray
   border-bottom: black 1px solid
   padding: 10px
 
@@ -20,12 +25,23 @@ body
     margin-top: 0
 
 .level-select
+  background-color: $my-gray
   display: flex
   flex-direction: column
-  width: 150px
+  width: 100px
+
+  padding: 1em
+  border-right: black 1px solid
 
   button
     display: block
+    margin-bottom: 1em
+
+button
+  background-color: white
+  border: black 1px solid
+  padding: 4px
+  font-weight: bold
 
 .level
   display: flex
@@ -33,7 +49,7 @@ body
   flex-grow: 1
 
 .palette
-  background-color: #eee
+  background-color: $my-gray
   border-top: black 1px solid
   display: flex
   padding: 0 20px 10px 20px
