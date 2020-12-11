@@ -179,7 +179,8 @@ let gate_H: Gate =
     | [ in1 ], [ out1 ] ->
         unitary1 in1 (fun val1 ->
             (Ket [ out1, false ]
-             + Ket [ out1, true ] * (if val1 then -1.0 else 1.0))
+             + Ket [ out1, true ]
+             * (if val1 then -1.0 else 1.0))
             / sqrt 2.0)
     | _ -> failwith "wires not correct"
 
@@ -217,6 +218,12 @@ let CNOT_BA =
       Outputs = [ port Quantum Bob; port Quantum Alice ]
       Gate = gate_CNOT }
 
+let Controlled_X =
+    { Name = "Controlled X"
+      Inputs = [ port Classical Any; port Quantum Any ]
+      Outputs = [ port Classical Any; port Quantum Any ]
+      Gate = gate_CNOT }
+
 
 let gate_SWAP: Gate =
     function
@@ -228,6 +235,22 @@ let SWAP =
       Inputs = [ port Quantum Alice; port Quantum Bob ]
       Outputs = [ port Quantum Alice; port Quantum Bob ]
       Gate = gate_SWAP }
+
+
+let gate_ebit: Gate =
+    function
+    | [], [ out1; out2 ] ->
+        unitary [] (fun _ ->
+            (Ket [ out1, false; out2, false ]
+             + Ket [ out1, true; out2, true ])
+            / sqrt 2.0)
+    | _ -> failwith "wires not correct"
+
+let ebit =
+    { Name = "ebit"
+      Inputs = [ ]
+      Outputs = [ port Quantum Alice; port Quantum Bob ]
+      Gate = gate_ebit }
 
 
 let gate_M: Gate =

@@ -2,6 +2,7 @@
 
 module internal Seq =
     let tryMax xs =
+        let xs = Seq.cache xs
         if Seq.isEmpty xs then None else Seq.max xs |> Some
 
 module internal Map =

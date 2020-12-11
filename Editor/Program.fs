@@ -31,79 +31,23 @@ type private Message =
     | EndWire of NodeIOId
     | Evaluate
 
-let private initialBoard =
-    { StartNodeId = NodeId 0
-      EndNodeId = NodeId 4
-      Nodes =
-          [ NodeId 0,
-            { Definition = startNodeDef []
-              Visibility = Normal
-              Position = { X = 0.0; Y = 0.0 } }
-            NodeId 1,
-            { Definition = InitQubit
-              Visibility = Normal
-              Position = { X = 200.0; Y = 0.0 } }
-            NodeId 2,
-            { Definition = H
-              Visibility = Normal
-              Position = { X = 400.0; Y = 0.0 } }
-            NodeId 3,
-            { Definition = M
-              Visibility = Normal
-              Position = { X = 600.0; Y = 0.0 } }
-            NodeId 4,
-            { Definition = endNodeDef [ port Classical Any ]
-              Visibility = Normal
-              Position = { X = 800.0; Y = 0.0 } }
-            NodeId 5,
-            { Definition = CNOT_AB
-              Visibility = Normal
-              Position = { X = 500.0; Y = 100.0 } } ]
-          |> Map.ofList
-      Wires =
-          [ WireId 5,
-            { Placement =
-                  { Left = { NodeId = NodeId 1; Port = 0 }
-                    Right = { NodeId = NodeId 2; Port = 0 } }
-              Visible = true }
-            WireId 6,
-            { Placement =
-                  { Left = { NodeId = NodeId 2; Port = 0 }
-                    Right = { NodeId = NodeId 3; Port = 0 } }
-              Visible = true }
-            WireId 7,
-            { Placement =
-                  { Left = { NodeId = NodeId 3; Port = 0 }
-                    Right = { NodeId = NodeId 4; Port = 0 } }
-              Visible = true } ]
-          |> Map.ofList
-      WireCreationState = NotDragging }
-
-let private initialChallenge =
-    { Description = "A quantum coin flip: measure zero or one 50% of the time."
-      Free = [ H; M ]
-      Costly = [ CNOT_AB, 1 ]
-      Goal = InitCbitRandom }
-
-let private initialLevel =
-    { Challenge = initialChallenge
-      Board = initialBoard }
-
 let private init () =
-    { Level = initialLevel
+    { Level = level_quantumCoinFlip
       Evaluation = "" }
 
 let private levels =
-    [ "Level 1", initialLevel
-      "Level 2", initialLevel
-      "Level 3", initialLevel ]
+    [ "Level 1", level_quantumCoinFlip
+      "Level 2", level_swap
+      "Level 3", level_qbit_to_ebit ]
 
-// let realOutputState, oracleOutputState = testOnce challenge board
+// let realOutputState, oracleOutputState = testOnce level_quantumCoinFlip
 // printfn "%s" (prettyPrint realOutputState)
 // printfn "%s" (prettyPrint oracleOutputState)
 
-let private printNodePortId (NodeId nodeId) isOutput port =
-    sprintf "Node%iType%bPort%i" nodeId isOutput port
+let private printNodePortId nodeIoId =
+    match nodeIoId with
+    | NodeInputId { NodeId = (NodeId nodeId); InputPort = port } -> sprintf "Node%iInputPort%i" nodeId port
+    | NodeOutputId { NodeId = (NodeId nodeId); OutputPort = port } -> sprintf "Node%iOutputPort%i" nodeId port
 
 let private relativeTo selector position =
     let element =
@@ -145,60 +89,54 @@ let private viewPort props port =
 
     div (Seq.append [ Class(String.Join(" ", classes)) ] props) []
 
-let private viewDraggablePort dispatch (board: Board) nodeId isOutputPort portId =
-    let node = board.Nodes.[nodeId]
-
-    let port =
-        if isOutputPort then node.Definition.Outputs.[portId] else node.Definition.Inputs.[portId]
+let private viewDraggablePort dispatch (board: Board) nodeIoId =
+    let myPort = Board.port nodeIoId board
 
     let relations =
-        [| if isOutputPort then
-            yield!
-                outputWireIds (toCircuit board) nodeId
-                |> Seq.map (fun wireId -> board.Wires.[wireId])
-                |> Seq.filter (fun wire -> wire.Placement.Left.Port = portId)
-                |> Seq.map (fun wire ->
-                    printNodePortId wire.Placement.Right.NodeId false wire.Placement.Right.Port
-                    |> wireRelation
-                        (Board.port wire.Placement.Right.NodeId wire.Placement.Right.Port true board)
-                            .DataType)
+        [| yield!
+            board.Wires
+            |> Seq.filter (fun wire -> NodeOutputId wire.Value.Placement.Left = nodeIoId)
+            |> Seq.map (fun wire ->
+                let nodeIoId = (NodeInputId wire.Value.Placement.Right)
+                wireRelation (Board.port nodeIoId board).DataType (printNodePortId nodeIoId))
 
-            match board.WireCreationState with
-            | FloatingRight (outputId, _) when outputId = { NodeId = nodeId; Port = portId } ->
-                yield wireRelation (Board.port nodeId portId true board).DataType "floating-wire"
-            | _ -> () |]
+           match board.WireCreationState with
+           | FloatingRight (outputId, _) when (NodeOutputId outputId) = nodeIoId ->
+               yield wireRelation myPort.DataType "floating-wire"
+           | _ -> () |]
 
-    Archer.element [ Id(printNodePortId nodeId isOutputPort portId)
+    Archer.element [ Id(printNodePortId nodeIoId)
                      Relations relations ] [
-        port
-        |> viewPort [ OnMouseDown(fun event ->
-                          event.preventDefault ()
+        viewPort
+            [ OnMouseDown(fun event ->
+                event.preventDefault ()
 
-                          let position =
-                              { X = event.pageX; Y = event.pageY }
-                              |> relativeTo ".board"
+                let position =
+                    { X = event.pageX; Y = event.pageY }
+                    |> relativeTo ".board"
 
-                          if isOutputPort
-                          then FloatingRight({ NodeId = nodeId; Port = portId }, position)
-                          else FloatingLeft({ NodeId = nodeId; Port = portId }, position)
-                          |> StartWire
-                          |> dispatch)
-                      OnMouseUp(fun _ ->
-                          if isOutputPort
-                          then NodeOutputId { NodeId = nodeId; Port = portId }
-                          else NodeInputId { NodeId = nodeId; Port = portId }
-                          |> EndWire
-                          |> dispatch) ]
+                let wireCreationState =
+                    match nodeIoId with
+                    | NodeInputId n -> FloatingLeft(n, position)
+                    | NodeOutputId n -> FloatingRight(n, position)
+
+                wireCreationState |> StartWire |> dispatch)
+              OnMouseUp(fun _ -> nodeIoId |> EndWire |> dispatch) ]
+            myPort
     ]
 
-let private viewNodeDefinition container viewPort (node: NodeDefinition) =
+let private viewNodeDefinition container
+                               (viewInputPort: int -> ReactElement)
+                               (viewOutputPort: int -> ReactElement)
+                               (node: NodeDefinition)
+                               =
     div [ Class "node"
           Ref(fun element -> if isNull element then container () |> Container.refreshScreen) ] [
-        div [ Class "portstack" ] (node.Inputs |> idx |> Seq.map (viewPort false))
+        div [ Class "portstack" ] (node.Inputs |> idx |> Seq.map viewInputPort)
         div [ Class "nodetitle" ] [
             str node.Name
         ]
-        div [ Class "portstack" ] (node.Outputs |> idx |> Seq.map (viewPort true))
+        div [ Class "portstack" ] (node.Outputs |> idx |> Seq.map viewOutputPort)
     ]
 
 let private viewNode dispatch (board: Board) container nodeId =
@@ -219,17 +157,17 @@ let private viewNode dispatch (board: Board) container nodeId =
                         false)
                 Position(Position.toDraggable node.Position) ] [
         node.Definition
-        |> viewNodeDefinition container (viewDraggablePort dispatch board nodeId)
+        |> viewNodeDefinition container (fun i ->
+               viewDraggablePort dispatch board (NodeInputId { NodeId = nodeId; InputPort = i })) (fun i ->
+               viewDraggablePort dispatch board (NodeOutputId { NodeId = nodeId; OutputPort = i }))
     ]
 
 let private viewFloatingWire board =
     let relations, position =
         match board.WireCreationState with
         | FloatingLeft (inputId, position) ->
-            [| printNodePortId inputId.NodeId false inputId.Port
-               |> wireRelation
-                   (Board.port inputId.NodeId inputId.Port false board)
-                       .DataType |],
+            [| printNodePortId (NodeInputId inputId)
+               |> wireRelation (Board.port (NodeInputId inputId) board).DataType |],
             position
         | FloatingRight (_, position) -> [||], position
         | NotDragging -> [||], { X = 0.0; Y = 0.0 }
@@ -273,9 +211,8 @@ let private viewPaletteNode dispatch (node, available) =
                         true) ] [
             viewNodeDefinition
                 (fun () -> Container.empty)
-                (fun isOutput portId ->
-                    if isOutput then node.Outputs.[portId] else node.Inputs.[portId]
-                    |> viewPort [])
+                (fun i -> viewPort [] node.Inputs.[i])
+                (fun i -> viewPort [] node.Outputs.[i])
                 node
         ]
     ]
@@ -290,7 +227,8 @@ let private viewPalette dispatch level =
 
 let private viewEvaluation dispatch evaluation =
     div [ Class "evaluation" ] [
-        button [ OnClick <| fun _ -> dispatch Evaluate ] [
+        button [ OnClick
+                 <| fun _ -> dispatch Evaluate ] [
             str "Evaluate"
         ]
         str evaluation
@@ -321,8 +259,7 @@ let private viewLevel dispatch model containerRef =
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
         viewChallenge dispatch model
         Archer.container [ Class "board"
-                           Ref(fun container ->
-                                   if isNull container |> not then containerRef := container :?> IContainer) ] [
+                           Ref(fun container -> if isNull container |> not then containerRef := container :?> IContainer) ] [
             nodes
             viewFloatingWire model.Level.Board
         ]

@@ -5,9 +5,9 @@ open SeattleQio.Simulator.Quantum
 
 type NodeId = NodeId of int
 
-type NodeOutputId = { NodeId: NodeId; Port: int }
+type NodeOutputId = { NodeId: NodeId; OutputPort: int }
 
-type NodeInputId = { NodeId: NodeId; Port: int }
+type NodeInputId = { NodeId: NodeId; InputPort: int }
 
 type NodeIOId =
     | NodeInputId of NodeInputId
@@ -24,7 +24,7 @@ type Circuit =
 let inputWireIds circuit nodeId =
     seq {
         for wire in circuit.Wires do
-            if wire.Value.Right.NodeId = nodeId then yield wire.Value.Right.Port, wire.Key
+            if wire.Value.Right.NodeId = nodeId then yield wire.Value.Right.InputPort, wire.Key
     }
     |> Seq.sortBy fst
     |> Seq.map snd
@@ -33,7 +33,7 @@ let inputWireIds circuit nodeId =
 let outputWireIds circuit nodeId =
     seq {
         for wire in circuit.Wires do
-            if wire.Value.Left.NodeId = nodeId then yield wire.Value.Left.Port, wire.Key
+            if wire.Value.Left.NodeId = nodeId then yield wire.Value.Left.OutputPort, wire.Key
     }
     |> Seq.sortBy fst
     |> Seq.map snd
