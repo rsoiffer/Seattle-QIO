@@ -10,7 +10,7 @@ type Challenge =
     { Description: string
       Free: NodeDefinition list
       Costly: (NodeDefinition * int) list
-      Goal: NodeDefinition }
+      Goals: NodeDefinition list }
 
 type Level = { Challenge: Challenge; Board: Board }
 
@@ -48,26 +48,27 @@ let endNodeDef outputs =
       Gate = gate_DoNothing }
 
 let initialBoard challenge =
-    let startId = NodeId(myRandom.Next())
-    let endId = NodeId(myRandom.Next())
+    let startNodes =
+        [ for goal in challenge.Goals do
+            yield
+                NodeId(myRandom.Next()),
+                { Definition = startNodeDef goal.Inputs
+                  InferredInputTypes = None
+                  InferredOutputTypes = None
+                  Position = { X = 0.0; Y = 0.0 } } ]
 
-    let startNode =
-        { Definition = startNodeDef challenge.Goal.Inputs
-          InferredInputTypes = None
-          InferredOutputTypes = None
-          Position = { X = 0.0; Y = 0.0 } }
+    let endNodes =
+        [ for goal in challenge.Goals do
+            yield
+                NodeId(myRandom.Next()),
+                { Definition = endNodeDef goal.Outputs
+                  InferredInputTypes = None
+                  InferredOutputTypes = None
+                  Position = { X = 200.0; Y = 0.0 } } ]
 
-    let endNode =
-        { Definition = endNodeDef challenge.Goal.Outputs
-          InferredInputTypes = None
-          InferredOutputTypes = None
-          Position = { X = 200.0; Y = 0.0 } }
-
-    { StartNodeId = startId
-      EndNodeId = endId
-      Nodes =
-          Map.ofSeq [ startId, startNode
-                      endId, endNode ]
+    { StartNodeIds = startNodes |> List.map fst
+      EndNodeIds = endNodes |> List.map fst
+      Nodes = Map.ofSeq (startNodes @ endNodes)
       Wires = Map.ofSeq []
       WireCreationState = NotDragging }
 
@@ -81,32 +82,28 @@ let testOnce level =
     let circuit = toCircuit level.Board
 
     let startWireIds =
-        outputWireIds circuit level.Board.StartNodeId
+        [ for startNodeId in level.Board.StartNodeIds do
+            yield outputWireIds circuit startNodeId ]
 
     let endWireIds =
-        inputWireIds circuit level.Board.EndNodeId
+        [ for endNodeId in level.Board.EndNodeIds do
+            yield inputWireIds circuit endNodeId ]
 
     let classicalStartWires =
-        seq {
-            for i in idx level.Challenge.Goal.Inputs do
-                if level.Challenge.Goal.Inputs.[i].DataType = Classical
-                then yield startWireIds.[i]
-        }
+        [ for j in idx level.Challenge.Goals do
+            for i in idx level.Challenge.Goals.[j].Inputs do
+                if level.Challenge.Goals.[j].Inputs.[i].DataType = Classical
+                then yield startWireIds.[j].[i] ]
 
     let quantumStartWires =
-        seq {
-            yield WireId 0
+        [ for j in idx level.Challenge.Goals do
+            for i in idx level.Challenge.Goals.[j].Inputs do
+                if level.Challenge.Goals.[j].Inputs.[i].DataType = Quantum
+                then yield startWireIds.[j].[i] ]
 
-            for i in idx level.Challenge.Goal.Inputs do
-                if level.Challenge.Goal.Inputs.[i].DataType = Quantum
-                then yield startWireIds.[i]
-        }
+    let classicalState = randomClassicalState classicalStartWires
 
-    let classicalState =
-        randomClassicalState (List.ofSeq classicalStartWires)
-
-    let quantumState =
-        randomPureState (List.ofSeq quantumStartWires)
+    let quantumState = randomPureState quantumStartWires
 
     let fullState =
         SparseVector.tensor (SparseVector.ofSeq [ classicalState, Complex.one ]) quantumState
@@ -116,21 +113,22 @@ let testOnce level =
 
     let oracleCircuit =
         { Nodes =
-              Map.ofSeq [ NodeId 0, gate_DoNothing
-                          NodeId 1, level.Challenge.Goal.Gate
-                          NodeId 2, gate_DoNothing ]
+              Map.ofSeq [ yield NodeId -1, gate_DoNothing
+                          for j in idx level.Challenge.Goals do
+                              yield NodeId j, level.Challenge.Goals.[j].Gate
+                          yield NodeId -2, gate_DoNothing ]
           Wires =
-              Map.ofSeq
-                  (Seq.concat [ idx level.Challenge.Goal.Inputs
-                                |> Seq.map (fun i ->
-                                    startWireIds.[i],
-                                    { Left = { NodeId = NodeId 0; OutputPort = i }
-                                      Right = { NodeId = NodeId 1; InputPort = i } })
-                                idx level.Challenge.Goal.Outputs
-                                |> Seq.map (fun i ->
-                                    endWireIds.[i],
-                                    { Left = { NodeId = NodeId 1; OutputPort = i }
-                                      Right = { NodeId = NodeId 2; InputPort = i } }) ]) }
+              Map.ofSeq [ for j in idx level.Challenge.Goals do
+                              for i in idx level.Challenge.Goals.[j].Inputs do
+                                  yield
+                                      startWireIds.[j].[i],
+                                      { Left = { NodeId = NodeId -1; OutputPort = i }
+                                        Right = { NodeId = NodeId j; InputPort = i } }
+                              for i in idx level.Challenge.Goals.[j].Outputs do
+                                  yield
+                                      endWireIds.[j].[i],
+                                      { Left = { NodeId = NodeId j; OutputPort = i }
+                                        Right = { NodeId = NodeId -2; InputPort = i } } ] }
 
     let realOutputState = eval circuit inputState
     let oracleOutputState = eval oracleCircuit inputState
@@ -143,62 +141,95 @@ let testOnce level =
     realOutputState, oracleOutputState
 
 
-let emptyBoardFrom nodeDef =
-    { StartNodeId = NodeId 0
-      EndNodeId = NodeId 1
-      Nodes =
-          [ NodeId 0,
-            { Definition = startNodeDef nodeDef.Inputs
-              InferredInputTypes = None
-              InferredOutputTypes = None
-              Position = { X = 50.0; Y = 100.0 } }
-            NodeId 1,
-            { Definition = endNodeDef nodeDef.Outputs
-              InferredInputTypes = None
-              InferredOutputTypes = None
-              Position = { X = 800.0; Y = 100.0 } } ]
-          |> Map.ofList
-      Wires = Map.empty
-      WireCreationState = NotDragging }
+let emptyLevelFrom challenge =
+    { Challenge = challenge
+      Board =
+          { StartNodeIds =
+                [ for i in idx challenge.Goals do
+                    yield NodeId i ]
+            EndNodeIds =
+                [ for i in idx challenge.Goals do
+                    yield NodeId(100 + i) ]
+            Nodes =
+                [ for i in idx challenge.Goals do
+                    yield
+                        NodeId i,
+                        { Definition = startNodeDef challenge.Goals.[i].Inputs
+                          InferredInputTypes = None
+                          InferredOutputTypes = None
+                          Position =
+                              { X = 50.0
+                                Y = 100.0 * (float i + 1.0) } }
 
-let level_quantumCoinFlip =
-    { Challenge =
-        { Description = "A quantum coin flip: measure zero or one 50% of the time."
-          Free = [ InitQubit; X; Z; H; M ]
-          Costly = [ ]
-          Goal = InitCbitRandom }
-      Board = emptyBoardFrom InitCbitRandom }
+                    yield
+                        NodeId(100 + i),
+                        { Definition = endNodeDef challenge.Goals.[i].Outputs
+                          InferredInputTypes = None
+                          InferredOutputTypes = None
+                          Position =
+                              { X = 750.0
+                                Y = 100.0 * (float i + 1.0) } } ]
+                |> Map.ofList
+            Wires = Map.empty
+            WireCreationState = NotDragging } }
 
-let level_swap =
-    { Challenge =
-        { Description = "Swap Alice and Bob's qubits"
-          Free = [ ]
-          Costly = [ qbit_AB, 1; qbit_BA, 1 ]
-          Goal = SWAP }
-      Board = emptyBoardFrom SWAP }
+let challenge_quantumCoinFlip =
+    { Description = "A quantum coin flip: measure zero or one 50% of the time."
+      Free = [ InitQubit; X; Z; H; M ]
+      Costly = []
+      Goals = [ InitCbitRandom ] }
 
-let level_swap_cnot =
-    { Challenge =
-        { Description = "Swap Alice and Bob's qubits"
-          Free = [ ]
-          Costly = [ CNOT_AB, 2; CNOT_BA, 1 ]
-          Goal = SWAP }
-      Board = emptyBoardFrom SWAP }
+let challenge_swap =
+    { Description = "Swap Alice and Bob's qubits"
+      Free = []
+      Costly = [ qbit_AB, 1; qbit_BA, 1 ]
+      Goals = [ SWAP ] }
 
-let level_qbit_to_ebit =
-    { Challenge =
-        { Description = "Create an entangled pair"
-          Free = [ InitQubit; H; CNOT ]
-          Costly = [ qbit_AB, 1 ]
-          Goal = ebit }
-      Board = emptyBoardFrom ebit }
+let challenge_swap_cnot =
+    { Description = "Swap Alice and Bob's qubits"
+      Free = []
+      Costly = [ CNOT_AB, 2; CNOT_BA, 1 ]
+      Goals = [ SWAP ] }
 
-let level_qbit_to_cbit =
-    { Challenge =
-        { Description = "Send a classical bit from Alice to Bob"
-          Free = [ InitQubit; M; Controlled_X; DestroyCbit ]
-          Costly = [ qbit_AB, 1 ]
-          Goal = cbit_AB }
-      Board = emptyBoardFrom cbit_AB }
+let challenge_qbit_to_ebit =
+    { Description = "Create an entangled pair"
+      Free = [ InitQubit; H; CNOT ]
+      Costly = [ qbit_AB, 1 ]
+      Goals = [ ebit ] }
+
+let challenge_qbit_to_cbit =
+    { Description = "Send a classical bit from Alice to Bob"
+      Free =
+          [ InitQubit
+            M
+            Controlled_X
+            DestroyCbit ]
+      Costly = [ qbit_AB, 1 ]
+      Goals = [ cbit_AB ] }
 
 
+let challenge_a1q1_a =
+    { Description = "Implement the CNOT gate"
+      Free =
+          [ InitQubit
+            H
+            CNOT
+            M
+            Controlled_X
+            Controlled_Z
+            DestroyCbit ]
+      Costly = [ ebit, 1; cbit_AB, 1; cbit_BA, 1 ]
+      Goals = [ CNOT_AB ] }
+
+let challenge_a1q1_b =
+    { Description = "Implement the CNOT gate"
+      Free =
+          [ InitQubit
+            H
+            CNOT
+            M
+            Controlled_X
+            Controlled_Z
+            DestroyCbit ]
+      Costly = [ ebit, 1; cobit_AB, 1; cobit_BA, 1 ]
+      Goals = [ CNOT_AB; ebit; ebit ] }

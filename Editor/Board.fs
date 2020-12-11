@@ -38,8 +38,8 @@ type internal WireCreationState =
     | FloatingLeft of NodeInputId * Position
 
 type internal Board =
-    { StartNodeId: NodeId
-      EndNodeId: NodeId
+    { StartNodeIds: NodeId list
+      EndNodeIds: NodeId list
       Nodes: Map<NodeId, Node>
       Wires: Map<WireId, Wire>
       WireCreationState: WireCreationState }
@@ -70,10 +70,12 @@ module internal Board =
             board.Nodes
             |> Map.map (fun k v -> NodeId(myRandom.Next()))
 
+        let getNewId i = newNodeIds.[i]
+
         let newNodes =
             board.Nodes
             |> Map.toSeq
-            |> Seq.map (fun (a, b) -> (newNodeIds.[a], b))
+            |> Seq.map (fun (a, b) -> (getNewId a, b))
             |> Map.ofSeq
 
         let newWires =
@@ -81,17 +83,17 @@ module internal Board =
             |> Map.map (fun k wire ->
                 let newLeft =
                     { wire.Placement.Left with
-                          NodeId = newNodeIds.[wire.Placement.Left.NodeId] }
+                          NodeId = getNewId wire.Placement.Left.NodeId }
 
                 let newRight =
                     { wire.Placement.Right with
-                          NodeId = newNodeIds.[wire.Placement.Right.NodeId] }
+                          NodeId = getNewId wire.Placement.Right.NodeId }
 
                 { wire with
                       Placement = { Left = newLeft; Right = newRight } })
 
-        { StartNodeId = newNodeIds.[board.StartNodeId]
-          EndNodeId = newNodeIds.[board.EndNodeId]
+        { StartNodeIds = board.StartNodeIds |> List.map getNewId
+          EndNodeIds = board.EndNodeIds |> List.map getNewId
           Nodes = newNodes
           Wires = newWires
           WireCreationState =
@@ -100,12 +102,12 @@ module internal Board =
               | FloatingRight (nodeOutputId, pos) ->
                   FloatingRight
                       ({ nodeOutputId with
-                             NodeId = newNodeIds.[nodeOutputId.NodeId] },
+                             NodeId = getNewId nodeOutputId.NodeId },
                        pos)
               | FloatingLeft (nodeInputId, pos) ->
                   FloatingLeft
                       ({ nodeInputId with
-                             NodeId = newNodeIds.[nodeInputId.NodeId] },
+                             NodeId = getNewId nodeInputId.NodeId },
                        pos) }
 
     let port nodeIoId board =

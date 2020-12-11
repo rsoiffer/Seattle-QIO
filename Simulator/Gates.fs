@@ -225,6 +225,39 @@ let Controlled_X =
       Gate = gate_CNOT }
 
 
+let gate_CZ: Gate =
+    function
+    | [ in1; in2 ], [ out1; out2 ] ->
+        unitary [ in1; in2 ] (fun [ val1; val2 ] ->
+            Ket [ out1, val1; out2, val2 ]
+            * (if val1 && val2 then -1.0 else 1.0))
+    | _ -> failwith "wires not correct"
+
+let CZ =
+    { Name = "CZ"
+      Inputs = [ port Quantum Any; port Quantum Any ]
+      Outputs = [ port Quantum Any; port Quantum Any ]
+      Gate = gate_CZ }
+
+let CZ_AB =
+    { Name = "CZ_AB"
+      Inputs = [ port Quantum Alice; port Quantum Bob ]
+      Outputs = [ port Quantum Alice; port Quantum Bob ]
+      Gate = gate_CZ }
+
+let CZ_BA =
+    { Name = "CZ_BA"
+      Inputs = [ port Quantum Bob; port Quantum Alice ]
+      Outputs = [ port Quantum Bob; port Quantum Alice ]
+      Gate = gate_CZ }
+
+let Controlled_Z =
+    { Name = "Controlled Z"
+      Inputs = [ port Classical Any; port Quantum Any ]
+      Outputs = [ port Classical Any; port Quantum Any ]
+      Gate = gate_CZ }
+
+
 let gate_SWAP: Gate =
     function
     | [ in1; in2 ], [ out1; out2 ] -> map (modifyBits [ in1; in2 ] (fun [ val1; val2 ] -> B [ out1, val2; out2, val1 ]))
@@ -248,7 +281,7 @@ let gate_ebit: Gate =
 
 let ebit =
     { Name = "ebit"
-      Inputs = [ ]
+      Inputs = []
       Outputs = [ port Quantum Alice; port Quantum Bob ]
       Gate = gate_ebit }
 

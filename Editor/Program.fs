@@ -32,13 +32,15 @@ type private Message =
     | Evaluate
 
 let private init () =
-    { Level = level_quantumCoinFlip
+    { Level = emptyLevelFrom challenge_quantumCoinFlip
       Evaluation = "" }
 
 let private levels =
-    [ "Level 1", level_quantumCoinFlip
-      "Level 2", level_swap
-      "Level 3", level_qbit_to_ebit ]
+    [ "Level 1", emptyLevelFrom challenge_quantumCoinFlip
+      "Level 2", emptyLevelFrom challenge_swap
+      "Level 3", emptyLevelFrom challenge_qbit_to_ebit
+      "A1Q1 Part a", emptyLevelFrom challenge_a1q1_a
+      "A1Q1 Part b", emptyLevelFrom challenge_a1q1_b ]
 
 // let realOutputState, oracleOutputState = testOnce level_quantumCoinFlip
 // printfn "%s" (prettyPrint realOutputState)
@@ -332,8 +334,8 @@ let private update message model =
         { model with
               Level = { model.Level with Board = board } }
     | RemoveNode nodeId ->
-        if nodeId = model.Level.Board.StartNodeId
-           || nodeId = model.Level.Board.EndNodeId then
+        if List.contains nodeId model.Level.Board.StartNodeIds
+           || List.contains nodeId model.Level.Board.EndNodeIds then
             model
         else
             let board =
