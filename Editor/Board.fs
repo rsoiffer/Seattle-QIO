@@ -39,14 +39,10 @@ type internal Board =
       WireCreationState: WireCreationState }
 
 module internal Board =
-    let addNode node board =
-        let nodeId =
-            Map.toSeq board.Nodes
-            |> Seq.map (fun ((NodeId nodeId), _) -> nodeId)
-            |> Seq.tryMax
-            |> Option.defaultValue 0
-            |> (+) 1
-            |> NodeId
+    let myRandom = System.Random()
+
+    let addNode node (board: Board) =
+        let nodeId = NodeId(myRandom.Next())
 
         { board with
               Nodes = board.Nodes |> Map.add nodeId node }
@@ -62,14 +58,8 @@ module internal Board =
               Nodes = board.Nodes |> Map.remove nodeId
               Wires = wires }
 
-    let addWire (left: NodeOutputId) (right: NodeInputId) board =
-        let wireId =
-            Map.toSeq board.Wires
-            |> Seq.map (fun ((WireId wireId), _) -> wireId)
-            |> Seq.tryMax
-            |> Option.defaultValue 0
-            |> (+) 1
-            |> WireId
+    let addWire (left: NodeOutputId) (right: NodeInputId) (board: Board) =
+        let wireId = WireId(myRandom.Next())
 
         let wire =
             { Placement = { Left = left; Right = right }
@@ -85,10 +75,8 @@ module internal Board =
 
     let port nodeIoId board =
         match nodeIoId with
-        | NodeInputId nodeInputId -> 
-            board.Nodes.[nodeInputId.NodeId].Definition.Inputs.[nodeInputId.InputPort]
-        | NodeOutputId nodeInputId -> 
-            board.Nodes.[nodeInputId.NodeId].Definition.Outputs.[nodeInputId.OutputPort]
+        | NodeInputId nodeInputId -> board.Nodes.[nodeInputId.NodeId].Definition.Inputs.[nodeInputId.InputPort]
+        | NodeOutputId nodeInputId -> board.Nodes.[nodeInputId.NodeId].Definition.Outputs.[nodeInputId.OutputPort]
 
     let count definition board =
         board.Nodes

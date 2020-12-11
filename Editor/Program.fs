@@ -98,7 +98,7 @@ let private viewDraggablePort dispatch (board: Board) nodeIoId =
             |> Seq.filter (fun wire -> NodeOutputId wire.Value.Placement.Left = nodeIoId)
             |> Seq.map (fun wire ->
                 let nodeIoId = (NodeInputId wire.Value.Placement.Right)
-                wireRelation (Board.port nodeIoId board).DataType (printNodePortId nodeIoId))
+                wireRelation myPort.DataType (printNodePortId nodeIoId))
 
            match board.WireCreationState with
            | FloatingRight (outputId, _) when (NodeOutputId outputId) = nodeIoId ->
@@ -170,7 +170,7 @@ let private viewFloatingWire board =
                |> wireRelation (Board.port (NodeInputId inputId) board).DataType |],
             position
         | FloatingRight (_, position) -> [||], position
-        | NotDragging -> [||], { X = 0.0; Y = 0.0 }
+        | NotDragging -> [||], { X = 500.0; Y = 500.0 }
 
     draggable [ Disabled true
                 Position(Position.toDraggable position) ] [
@@ -242,6 +242,8 @@ let private viewChallenge dispatch model =
         viewEvaluation dispatch model.Evaluation
     ]
 
+let globalContainerRef = ref Container.empty
+
 let private viewLevel dispatch model containerRef =
     let nodes =
         model.Level.Board.Nodes
@@ -259,7 +261,10 @@ let private viewLevel dispatch model containerRef =
           OnMouseUp(fun _ -> StartWire NotDragging |> dispatch) ] [
         viewChallenge dispatch model
         Archer.container [ Class "board"
-                           Ref(fun container -> if isNull container |> not then containerRef := container :?> IContainer) ] [
+                           Ref(fun container ->
+                                   if isNull container |> not then
+                                       containerRef := container :?> IContainer
+                                       globalContainerRef := container :?> IContainer) ] [
             nodes
             viewFloatingWire model.Level.Board
         ]
@@ -283,6 +288,7 @@ let private view model dispatch =
     ]
 
 let private update message model =
+    Container.refreshScreen (!globalContainerRef)
     match message with
     | LoadLevel level -> { model with Level = level }
     | AddNode (node, position) ->
