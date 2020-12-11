@@ -84,9 +84,23 @@ module internal Board =
                 { wire with
                       Placement = { Left = newLeft; Right = newRight } })
 
-        { board with
-              Nodes = newNodes
-              Wires = newWires }
+        { StartNodeId = newNodeIds.[board.StartNodeId]
+          EndNodeId = newNodeIds.[board.EndNodeId]
+          Nodes = newNodes
+          Wires = newWires
+          WireCreationState =
+              match board.WireCreationState with
+              | NotDragging -> NotDragging
+              | FloatingRight (nodeOutputId, pos) ->
+                  FloatingRight
+                      ({ nodeOutputId with
+                             NodeId = newNodeIds.[nodeOutputId.NodeId] },
+                       pos)
+              | FloatingLeft (nodeInputId, pos) ->
+                  FloatingLeft
+                      ({ nodeInputId with
+                             NodeId = newNodeIds.[nodeInputId.NodeId] },
+                       pos) }
 
     let addWire (left: NodeOutputId) (right: NodeInputId) (board: Board) =
         let wireId = WireId(myRandom.Next())
@@ -113,3 +127,11 @@ module internal Board =
         board.Nodes
         |> Map.filter (fun _ node -> node.Definition = definition)
         |> Map.count
+
+    let canAddWire (left: NodeOutputId) (right: NodeInputId) (board: Board) =
+        let leftPort = port (NodeOutputId left) board
+        let rightPort = port (NodeInputId right) board
+        leftPort.DataType = rightPort.DataType
+        && (leftPort.Party = Any
+            || rightPort.Party = Any
+            || leftPort.Party = rightPort.Party)

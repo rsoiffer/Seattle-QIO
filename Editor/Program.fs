@@ -65,16 +65,20 @@ let private isWithinBoard position =
     && position.Y > 0.0
     && position.Y < board.offsetHeight
 
-let private wireRelation dataType targetId =
+let private wireRelation port targetId =
     { targetId = targetId
       targetAnchor = Left
       sourceAnchor = Right
       label = None
       style =
           { Archer.Style.defaults with
-                strokeColor = Some "blue"
+                strokeColor =
+                    match port.Party with
+                    | Any -> Some "black"
+                    | Alice -> Some "red"
+                    | Bob -> Some "blue"
                 strokeWidth = Some 2.0
-                strokeDasharray = if dataType = Classical then Some "5,5" else None
+                strokeDasharray = if port.DataType = Classical then Some "5,5" else None
                 endShape = Some(upcast {| arrow = {| arrowLength = 0 |} |}) }
           |> Some }
 
@@ -98,11 +102,11 @@ let private viewDraggablePort dispatch (board: Board) nodeIoId =
             |> Seq.filter (fun wire -> NodeOutputId wire.Value.Placement.Left = nodeIoId)
             |> Seq.map (fun wire ->
                 let nodeIoId = (NodeInputId wire.Value.Placement.Right)
-                wireRelation myPort.DataType (printNodePortId nodeIoId))
+                wireRelation myPort (printNodePortId nodeIoId))
 
            match board.WireCreationState with
            | FloatingRight (outputId, _) when (NodeOutputId outputId) = nodeIoId ->
-               yield wireRelation myPort.DataType "floating-wire"
+               yield wireRelation myPort "floating-wire"
            | _ -> () |]
 
     Archer.element [ Id(printNodePortId nodeIoId)
@@ -167,7 +171,7 @@ let private viewFloatingWire board =
         match board.WireCreationState with
         | FloatingLeft (inputId, position) ->
             [| printNodePortId (NodeInputId inputId)
-               |> wireRelation (Board.port (NodeInputId inputId) board).DataType |],
+               |> wireRelation (Board.port (NodeInputId inputId) board) |],
             position
         | FloatingRight (_, position) -> [||], position
         | NotDragging -> [||], { X = 500.0; Y = 500.0 }
@@ -284,7 +288,11 @@ let private view model dispatch =
 
 let private update message model =
     match message with
-    | LoadLevel level -> { model with Level = level }
+    | LoadLevel level ->
+        { model with
+              Level =
+                  { level with
+                        Board = level.Board |> Board.randomizeNodeIds } }
     | AddNode (node, position) ->
         let board =
             model.Level.Board
@@ -305,12 +313,16 @@ let private update message model =
         { model with
               Level = { model.Level with Board = board } }
     | RemoveNode nodeId ->
-        let board =
-            Board.removeNode nodeId model.Level.Board
-            |> Board.randomizeNodeIds
+        if nodeId = model.Level.Board.StartNodeId
+           || nodeId = model.Level.Board.EndNodeId then
+            model
+        else
+            let board =
+                Board.removeNode nodeId model.Level.Board
+                |> Board.randomizeNodeIds
 
-        { model with
-              Level = { model.Level with Board = board } }
+            { model with
+                  Level = { model.Level with Board = board } }
     | StartWire creation ->
         let board =
             { model.Level.Board with
@@ -322,12 +334,15 @@ let private update message model =
         match nodeId, model.Level.Board.WireCreationState with
         | NodeOutputId outputId, FloatingLeft (inputId, _)
         | NodeInputId inputId, FloatingRight (outputId, _) ->
-            let board =
-                model.Level.Board
-                |> Board.addWire outputId inputId
+            if not (Board.canAddWire outputId inputId model.Level.Board) then
+                model
+            else
+                let board =
+                    model.Level.Board
+                    |> Board.addWire outputId inputId
 
-            { model with
-                  Level = { model.Level with Board = board } }
+                { model with
+                      Level = { model.Level with Board = board } }
         | _ -> model
     | Evaluate ->
         let evaluation =
@@ -337,7 +352,7 @@ let private update message model =
                 if state1 |> SparseVector.approximately 1e-3 state2
                 then "equal"
                 else "not equal"
-            with ex -> ex.Message
+            with ex -> "Error: " + ex.Message
 
         { model with Evaluation = evaluation }
 
