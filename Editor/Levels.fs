@@ -159,7 +159,7 @@ let emptyLevelFrom challenge =
                           InferredOutputTypes = None
                           Position =
                               { X = 50.0
-                                Y = 100.0 * (float i + 1.0) } }
+                                Y = 75.0 * (float i + 1.0) } }
 
                     yield
                         NodeId(100 + i),
@@ -168,7 +168,7 @@ let emptyLevelFrom challenge =
                           InferredOutputTypes = None
                           Position =
                               { X = 750.0
-                                Y = 100.0 * (float i + 1.0) } } ]
+                                Y = 75.0 * (float i + 1.0) } } ]
                 |> Map.ofList
             Wires = Map.empty
             WireCreationState = NotDragging } }
@@ -222,7 +222,7 @@ let challenge_a1q1_a =
       Goals = [ CNOT_AB ] }
 
 let challenge_a1q1_b =
-    { Description = "Implement the CNOT gate"
+    { Description = "Implement the CNOT gate and generate two ebits"
       Free =
           [ InitQubit
             H
@@ -233,3 +233,40 @@ let challenge_a1q1_b =
             DestroyCbit ]
       Costly = [ ebit, 1; cobit_AB, 1; cobit_BA, 1 ]
       Goals = [ CNOT_AB; ebit; ebit ] }
+
+let challenge_a1q1_c =
+    { Description = "Send two cbits, one in each direction"
+      Free =
+          [ InitQubit
+            H
+            CNOT
+            M
+            Controlled_X
+            Controlled_Z
+            DestroyCbit ]
+      Costly = [ CNOT_AB, 1; ebit, 1 ]
+      Goals = [ cbit_AB; cbit_BA ] }
+
+let challenge_a1q1_d =
+    { Description = "Send two cobits, one in each direction"
+      Free =
+          [ X
+            Z
+            H
+            CNOT
+            CZ ]
+      Costly = [ CNOT_AB, 1; ebit, 1 ]
+      Goals = [ cobit_AB; cobit_BA ] }
+
+let challenge_a1q1_e =
+    { Description = "SWAP two qubits and generate 3 ebits"
+      Free =
+          [ InitQubit
+            H
+            CNOT
+            M
+            Controlled_X
+            Controlled_Z
+            DestroyCbit ]
+      Costly = [ CNOT_AB, 1; CNOT_BA, 1; ebit, 3 ]
+      Goals = [ SWAP; ebit; ebit; ebit ] }

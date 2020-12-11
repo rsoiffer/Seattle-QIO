@@ -40,7 +40,10 @@ let private levels =
       "Level 2", emptyLevelFrom challenge_swap
       "Level 3", emptyLevelFrom challenge_qbit_to_ebit
       "A1Q1 Part a", emptyLevelFrom challenge_a1q1_a
-      "A1Q1 Part b", emptyLevelFrom challenge_a1q1_b ]
+      "A1Q1 Part b", emptyLevelFrom challenge_a1q1_b
+      "A1Q1 Part c", emptyLevelFrom challenge_a1q1_c
+      "A1Q1 Part d", emptyLevelFrom challenge_a1q1_d
+      "A1Q1 Part e", emptyLevelFrom challenge_a1q1_e ]
 
 // let realOutputState, oracleOutputState = testOnce level_quantumCoinFlip
 // printfn "%s" (prettyPrint realOutputState)
