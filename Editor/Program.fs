@@ -313,6 +313,7 @@ let private update message model =
     | RemoveNode nodeId ->
         let board =
             Board.removeNode nodeId model.Level.Board
+            |> Board.randomizeNodeIds
 
         { model with
               Level = { model.Level with Board = board } }
