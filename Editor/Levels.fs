@@ -78,16 +78,12 @@ let toCircuit (board: Board) =
 
 let idx s = seq { 0 .. Seq.length s - 1 }
 
-let testOnce level =
+let randomInput level =
     let circuit = toCircuit level.Board
 
     let startWireIds =
         [ for startNodeId in level.Board.StartNodeIds do
             yield outputWireIds circuit startNodeId ]
-
-    let endWireIds =
-        [ for endNodeId in level.Board.EndNodeIds do
-            yield inputWireIds circuit endNodeId ]
 
     let classicalStartWires =
         [ for j in idx level.Challenge.Goals do
@@ -109,7 +105,20 @@ let testOnce level =
         SparseVector.tensor (SparseVector.ofSeq [ classicalState, Complex.one ]) quantumState
         |> SparseVector.map (fun (b1, b2) -> merge b1 b2)
 
-    let inputState = outer fullState fullState
+    outer fullState fullState
+
+let testOnce level =
+    let circuit = toCircuit level.Board
+
+    let startWireIds =
+        [ for startNodeId in level.Board.StartNodeIds do
+            yield outputWireIds circuit startNodeId ]
+
+    let endWireIds =
+        [ for endNodeId in level.Board.EndNodeIds do
+            yield inputWireIds circuit endNodeId ]
+
+    let inputState = randomInput level
 
     let oracleCircuit =
         { Nodes =
@@ -133,12 +142,11 @@ let testOnce level =
     let realOutputState = eval circuit inputState
     let oracleOutputState = eval oracleCircuit inputState
 
-    // printfn "%A" (norm quantumState)
-    // printfn "%s" (prettyPrint inputState)
-    // printfn "%s" (prettyPrint realOutputState)
-    // printfn "%s" (prettyPrint oracleOutputState)
+    printfn "%s" (prettyPrint inputState)
+    printfn "%s" (prettyPrint realOutputState)
+    printfn "%s" (prettyPrint oracleOutputState)
 
-    realOutputState, oracleOutputState
+    inputState, realOutputState, oracleOutputState
 
 
 let emptyLevelFrom challenge =
@@ -157,9 +165,7 @@ let emptyLevelFrom challenge =
                         { Definition = startNodeDef challenge.Goals.[i].Inputs
                           InferredInputTypes = None
                           InferredOutputTypes = None
-                          Position =
-                              { X = 50.0
-                                Y = 75.0 * (float i + 1.0) } }
+                          Position = { X = 50.0; Y = 75.0 * (float i + 1.0) } }
 
                     yield
                         NodeId(100 + i),
@@ -249,12 +255,7 @@ let challenge_a1q1_c =
 
 let challenge_a1q1_d =
     { Description = "Send two cobits, one in each direction"
-      Free =
-          [ X
-            Z
-            H
-            CNOT
-            CZ ]
+      Free = [ X; Z; H; CNOT; CZ ]
       Costly = [ CNOT_AB, 1; ebit, 1 ]
       Goals = [ cobit_AB; cobit_BA ] }
 

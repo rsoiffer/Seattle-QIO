@@ -20,7 +20,15 @@ open SeattleQio.Simulator.Circuit
 open SeattleQio.Simulator.Gates
 open SeattleQio.Simulator.Quantum
 
-type private Model = { Level: Level; Evaluation: string }
+type private Evaluation =
+    { InputState: MixedState
+      OutputState: MixedState
+      ExpectedOutputState: MixedState
+      Result: string }
+
+type private Model =
+    { Level: Level
+      Evaluation: Evaluation option }
 
 type private Message =
     | LoadLevel of Level
@@ -33,7 +41,7 @@ type private Message =
 
 let private init () =
     { Level = emptyLevelFrom challenge_quantumCoinFlip
-      Evaluation = "" }
+      Evaluation = None }
 
 let private levels =
     [ "Level 1", emptyLevelFrom challenge_quantumCoinFlip
@@ -252,13 +260,69 @@ let private viewPalette dispatch level =
     |> List.map (viewPaletteNode dispatch)
     |> div [ Class "palette" ]
 
+let private viewMixedState (mixedState: MixedState) =
+    let all1 =
+        mixedState
+        |> SparseVector.toSeq
+        |> Seq.map (fst >> fst)
+        |> Set.ofSeq
+
+    let all2 =
+        mixedState
+        |> SparseVector.toSeq
+        |> Seq.map (fst >> snd)
+        |> Set.ofSeq
+
+
+    let prettyPrintBits (Bits b) =
+        b
+        |> Map.toSeq
+        |> Seq.map (fun b -> if snd b then "1" else "0")
+        |> Seq.fold (+) ""
+        |> sprintf "|%s⟩"
+
+    div [ Class "mixedstate" ] [
+        table [] [
+            // Header row
+            yield
+                tr [] [
+                    yield td [] []
+                    for b1 in all1 do
+                        yield td [] [ str (prettyPrintBits b1) ]
+                ]
+            // Body
+            for b2 in all2 do
+                yield
+                    tr [] [
+                        yield td [] [ str (prettyPrintBits b2) ]
+                        for b1 in all1 do
+                            let c = SparseVector.read (b1, b2) mixedState
+
+                            let s =
+                                if abs (c.r) < 0.01 && abs (c.i) < 0.01 then "0"
+                                else if abs (c.r) >= 0.01 && abs (c.i) < 0.01 then sprintf "%.2f" c.r
+                                else if abs (c.r) < 0.01 && abs (c.i) >= 0.01 then sprintf "%.2f i" c.i
+                                else sprintf "%.2f + %.2f i" c.r c.i
+
+                            yield td [] [ str s ]
+                    ]
+        ]
+    ]
+
 let private viewEvaluation dispatch evaluation =
     div [ Class "evaluation" ] [
-        button [ OnClick
-                 <| fun _ -> dispatch Evaluate ] [
-            str "Evaluate"
-        ]
-        str evaluation
+        yield
+            button [ OnClick
+                     <| fun _ -> dispatch Evaluate ] [
+                str "Evaluate"
+            ]
+        match evaluation with
+        | Some eval ->
+            yield str eval.Result
+            yield viewMixedState eval.InputState
+            yield viewMixedState eval.OutputState
+            yield viewMixedState eval.ExpectedOutputState
+        | None -> ()
     ]
 
 let private viewChallenge dispatch model =
@@ -371,14 +435,27 @@ let private update message model =
     | Evaluate ->
         let evaluation =
             try
-                let state1, state2 = testOnce model.Level
+                let inputState, outputState, expectedOutputState = testOnce model.Level
 
-                if state1 |> SparseVector.approximately 1e-3 state2
-                then "equal"
-                else "not equal"
-            with ex -> "Error: " + ex.Message
+                let result =
+                    if outputState
+                       |> SparseVector.approximately 1e-3 expectedOutputState then
+                        "equal"
+                    else
+                        "not equal"
 
-        { model with Evaluation = evaluation }
+                { InputState = inputState
+                  OutputState = outputState
+                  ExpectedOutputState = expectedOutputState
+                  Result = result }
+            with ex ->
+                { InputState = SparseVector.zero
+                  OutputState = SparseVector.zero
+                  ExpectedOutputState = SparseVector.zero
+                  Result = "Error: " + ex.Message }
+
+        { model with
+              Evaluation = Some evaluation }
 
 Program.mkSimple init update view
 |> Program.withReactSynchronous "app"
