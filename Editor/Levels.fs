@@ -229,14 +229,7 @@ let challenge_a1q1_a =
 
 let challenge_a1q1_b =
     { Description = "Implement the CNOT gate and generate two ebits"
-      Free =
-          [ InitQubit
-            H
-            CNOT
-            M
-            Controlled_X
-            Controlled_Z
-            DestroyCbit ]
+      Free = [ X; Z; H; CNOT; CZ ]
       Costly = [ ebit, 1; cobit_AB, 1; cobit_BA, 1 ]
       Goals = [ CNOT_AB; ebit; ebit ] }
 
@@ -261,13 +254,6 @@ let challenge_a1q1_d =
 
 let challenge_a1q1_e =
     { Description = "SWAP two qubits and generate 3 ebits"
-      Free =
-          [ InitQubit
-            H
-            CNOT
-            M
-            Controlled_X
-            Controlled_Z
-            DestroyCbit ]
+      Free = [ X; Z; H; CNOT; CZ ]
       Costly = [ CNOT_AB, 1; CNOT_BA, 1; ebit, 3 ]
       Goals = [ SWAP; ebit; ebit; ebit ] }

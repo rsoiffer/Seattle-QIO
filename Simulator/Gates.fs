@@ -306,13 +306,13 @@ let gate_InitBit: Gate =
     | _ -> failwith "wires not correct"
 
 let InitCbit =
-    { Name = "Init Cbit"
+    { Name = "False"
       Inputs = []
       Outputs = [ port Classical Any ]
       Gate = gate_InitBit }
 
 let InitQubit =
-    { Name = "Init Qubit"
+    { Name = "|0⟩"
       Inputs = []
       Outputs = [ port Quantum Any ]
       Gate = gate_InitBit }
@@ -347,13 +347,13 @@ let gate_DestroyBit: Gate =
     | _ -> failwith "wires not correct"
 
 let DestroyCbit =
-    { Name = "Destroy Cbit"
+    { Name = "Forget"
       Inputs = [ port Classical Any ]
       Outputs = []
       Gate = gate_DestroyBit }
 
 let DestroyQubit =
-    { Name = "Destroy Qubit"
+    { Name = "Forget"
       Inputs = [ port Quantum Any ]
       Outputs = []
       Gate = gate_DestroyBit }

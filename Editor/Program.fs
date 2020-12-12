@@ -379,7 +379,8 @@ let private update message model =
         { model with
               Level =
                   { level with
-                        Board = level.Board |> Board.randomizeNodeIds } }
+                        Board = level.Board |> Board.randomizeNodeIds }
+              Evaluation = None }
     | AddNode (node, position) ->
         let board =
             model.Level.Board
