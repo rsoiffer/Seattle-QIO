@@ -1,12 +1,13 @@
 module internal SeattleQio.Editor.Program
 
-open Browser.Dom
+open Browser
 open Browser.Types
 open Elmish
 open Elmish.React
 open Fable.React
 open Fable.React.Props
 open System
+open Thoth.Json
 
 open SeattleQio.Editor
 open SeattleQio.Editor.Board
@@ -40,8 +41,15 @@ type private Message =
     | Evaluate
 
 let private init () =
-    { Level = emptyLevelFrom challenge_quantumCoinFlip
-      Evaluation = None }
+    match Option.ofObj localStorage.["model"] with
+    | Some model -> Decode.Auto.unsafeFromString model
+    | None ->
+        { Level = emptyLevelFrom challenge_quantumCoinFlip
+          Evaluation = None }
+
+let inline private save model =
+    localStorage.["model"] <- Encode.Auto.toString (2, model)
+    model
 
 let private levels =
     [ "Level 1", emptyLevelFrom challenge_quantumCoinFlip
@@ -457,6 +465,7 @@ let private update message model =
 
         { model with
               Evaluation = Some evaluation }
+    |> save
 
 Program.mkSimple init update view
 |> Program.withReactSynchronous "app"
