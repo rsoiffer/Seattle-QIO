@@ -35,42 +35,17 @@ let randomPureState wireIds =
     |> List.zip allBits
     |> SparseVector.ofSeq
 
-let startNodeDef inputs =
-    { Name = "Input"
+let startNodeDef inputs num =
+    { Name = sprintf "Input %i" num
       Inputs = []
       Outputs = inputs
       Gate = gate_DoNothing }
 
-let endNodeDef outputs =
-    { Name = "Output"
+let endNodeDef outputs num =
+    { Name = sprintf "Output %i" num
       Inputs = outputs
       Outputs = []
       Gate = gate_DoNothing }
-
-let initialBoard challenge =
-    let startNodes =
-        [ for goal in challenge.Goals do
-            yield
-                NodeId(myRandom.Next()),
-                { Definition = startNodeDef goal.Inputs
-                  InferredInputTypes = None
-                  InferredOutputTypes = None
-                  Position = { X = 0.0; Y = 0.0 } } ]
-
-    let endNodes =
-        [ for goal in challenge.Goals do
-            yield
-                NodeId(myRandom.Next()),
-                { Definition = endNodeDef goal.Outputs
-                  InferredInputTypes = None
-                  InferredOutputTypes = None
-                  Position = { X = 200.0; Y = 0.0 } } ]
-
-    { StartNodeIds = startNodes |> List.map fst
-      EndNodeIds = endNodes |> List.map fst
-      Nodes = Map.ofSeq (startNodes @ endNodes)
-      Wires = Map.ofSeq []
-      WireCreationState = NotDragging }
 
 let toCircuit (board: Board) =
     { Nodes = Map.map (fun _ node -> node.Definition.Gate) board.Nodes
@@ -154,22 +129,24 @@ let emptyLevelFrom challenge =
       Board =
           { StartNodeIds =
                 [ for i in idx challenge.Goals do
-                    yield NodeId i ]
+                    if List.length challenge.Goals.[i].Inputs > 0
+                    then yield NodeId i ]
             EndNodeIds =
                 [ for i in idx challenge.Goals do
                     yield NodeId(100 + i) ]
             Nodes =
                 [ for i in idx challenge.Goals do
-                    yield
-                        NodeId i,
-                        { Definition = startNodeDef challenge.Goals.[i].Inputs
-                          InferredInputTypes = None
-                          InferredOutputTypes = None
-                          Position = { X = 50.0; Y = 75.0 * (float i + 1.0) } }
+                    if List.length challenge.Goals.[i].Inputs > 0 then
+                        yield
+                            NodeId i,
+                            { Definition = startNodeDef challenge.Goals.[i].Inputs (i + 1)
+                              InferredInputTypes = None
+                              InferredOutputTypes = None
+                              Position = { X = 50.0; Y = 75.0 * (float i + 1.0) } }
 
                     yield
                         NodeId(100 + i),
-                        { Definition = endNodeDef challenge.Goals.[i].Outputs
+                        { Definition = endNodeDef challenge.Goals.[i].Outputs (i + 1)
                           InferredInputTypes = None
                           InferredOutputTypes = None
                           Position =
