@@ -112,8 +112,8 @@ module internal Board =
 
     let port nodeIoId board =
         match nodeIoId with
-        | NodeInputId nodeInputId -> board.Nodes.[nodeInputId.NodeId].Definition.Inputs.[nodeInputId.InputPort]
-        | NodeOutputId nodeInputId -> board.Nodes.[nodeInputId.NodeId].Definition.Outputs.[nodeInputId.OutputPort]
+        | NodeInputId nodeInputId -> (info board.Nodes.[nodeInputId.NodeId].Definition).Inputs.[nodeInputId.InputPort]
+        | NodeOutputId nodeInputId -> (info board.Nodes.[nodeInputId.NodeId].Definition).Outputs.[nodeInputId.OutputPort]
 
     let count definition board =
         board.Nodes

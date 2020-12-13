@@ -47,7 +47,7 @@ type Port = { DataType: DataType; Party: Party }
 let port d p = { DataType = d; Party = p }
 
 [<CustomEquality; NoComparison>]
-type NodeDefinition =
+type NodeDefinitionInfo =
     { Name: string
       Inputs: Port list
       Outputs: Port list
@@ -55,7 +55,7 @@ type NodeDefinition =
 
     override node.Equals object =
         match object with
-        | :? NodeDefinition as other ->
+        | :? NodeDefinitionInfo as other ->
             node.Name = other.Name
             && node.Inputs = other.Inputs
             && node.Outputs = other.Outputs
@@ -65,9 +65,63 @@ type NodeDefinition =
         hash (node.Name, node.Inputs, node.Outputs)
 
 
+type NodeDefinition =
+    | StartNode of Port list * int
+    | EndNode of Port list * int
+    | Cbit
+    | Cbit_AB
+    | Cbit_BA
+    | Qbit
+    | Qbit_AB
+    | Qbit_BA
+    | Cobit
+    | Cobit_AB
+    | Cobit_BA
+    | CopyCbit
+    | X
+    | Not
+    | Z
+    | H
+    | CNOT
+    | CNOT_AB
+    | CNOT_BA
+    | Controlled_X
+    | CZ
+    | CZ_AB
+    | CZ_BA
+    | Controlled_Z
+    | SWAP
+    | Ebit
+    | M
+    | InitCbit
+    | InitQubit
+    | InitCbitRandom
+    | InitQubitRandom
+    | DestroyCbit
+    | DestroyQubit
+
+
 let gate_DoNothing: Gate =
     function
     | _ -> id
+
+
+let private allNodes =
+    System.Collections.Generic.Dictionary<NodeDefinition, NodeDefinitionInfo>()
+
+let info nodeDef =
+    match nodeDef with
+    | StartNode (inputs, num) ->
+        { Name = sprintf "Input %i" num
+          Inputs = []
+          Outputs = inputs
+          Gate = gate_DoNothing }
+    | EndNode (outputs, num) ->
+        { Name = sprintf "Output %i" num
+          Inputs = outputs
+          Outputs = []
+          Gate = gate_DoNothing }
+    | _ -> allNodes.[nodeDef]
 
 
 let gate_move: Gate =
@@ -75,41 +129,47 @@ let gate_move: Gate =
     | [ in1 ], [ out1 ] -> map (copyBits in1 [ out1 ])
     | _ -> failwith "wires not correct"
 
-let cbit =
-    { Name = "cbit"
-      Inputs = [ port Classical Any ]
-      Outputs = [ port Classical Any ]
-      Gate = gate_move }
+allNodes.Add
+    (Cbit,
+     { Name = "cbit"
+       Inputs = [ port Classical Any ]
+       Outputs = [ port Classical Any ]
+       Gate = gate_move })
 
-let cbit_AB =
-    { Name = "cbit_AB"
-      Inputs = [ port Classical Alice ]
-      Outputs = [ port Classical Bob ]
-      Gate = gate_move }
+allNodes.Add
+    (Cbit_AB,
+     { Name = "cbit_AB"
+       Inputs = [ port Classical Alice ]
+       Outputs = [ port Classical Bob ]
+       Gate = gate_move })
 
-let cbit_BA =
-    { Name = "cbit_BA"
-      Inputs = [ port Classical Bob ]
-      Outputs = [ port Classical Alice ]
-      Gate = gate_move }
+allNodes.Add
+    (Cbit_BA,
+     { Name = "cbit_BA"
+       Inputs = [ port Classical Bob ]
+       Outputs = [ port Classical Alice ]
+       Gate = gate_move })
 
-let qbit =
-    { Name = "qbit"
-      Inputs = [ port Quantum Any ]
-      Outputs = [ port Quantum Any ]
-      Gate = gate_move }
+allNodes.Add
+    (Qbit,
+     { Name = "qbit"
+       Inputs = [ port Quantum Any ]
+       Outputs = [ port Quantum Any ]
+       Gate = gate_move })
 
-let qbit_AB =
-    { Name = "qbit_AB"
-      Inputs = [ port Quantum Alice ]
-      Outputs = [ port Quantum Bob ]
-      Gate = gate_move }
+allNodes.Add
+    (Qbit_AB,
+     { Name = "qbit_AB"
+       Inputs = [ port Quantum Alice ]
+       Outputs = [ port Quantum Bob ]
+       Gate = gate_move })
 
-let qbit_BA =
-    { Name = "qbit_BA"
-      Inputs = [ port Quantum Bob ]
-      Outputs = [ port Quantum Alice ]
-      Gate = gate_move }
+allNodes.Add
+    (Qbit_BA,
+     { Name = "qbit_BA"
+       Inputs = [ port Quantum Bob ]
+       Outputs = [ port Quantum Alice ]
+       Gate = gate_move })
 
 
 let gate_copy: Gate =
@@ -117,31 +177,35 @@ let gate_copy: Gate =
     | [ in1 ], [ out1; out2 ] -> map (copyBits in1 [ out1; out2 ])
     | _ -> failwith "wires not correct"
 
-let cobit =
-    { Name = "cobit"
-      Inputs = [ port Quantum Any ]
-      Outputs = [ port Quantum Any; port Quantum Any ]
-      Gate = gate_copy }
+allNodes.Add
+    (Cobit,
+     { Name = "cobit"
+       Inputs = [ port Quantum Any ]
+       Outputs = [ port Quantum Any; port Quantum Any ]
+       Gate = gate_copy })
 
-let cobit_AB =
-    { Name = "cobit_AB"
-      Inputs = [ port Quantum Alice ]
-      Outputs = [ port Quantum Alice; port Quantum Bob ]
-      Gate = gate_copy }
+allNodes.Add
+    (Cobit_AB,
+     { Name = "cobit_AB"
+       Inputs = [ port Quantum Alice ]
+       Outputs = [ port Quantum Alice; port Quantum Bob ]
+       Gate = gate_copy })
 
-let cobit_BA =
-    { Name = "cobit_BA"
-      Inputs = [ port Quantum Bob ]
-      Outputs = [ port Quantum Bob; port Quantum Alice ]
-      Gate = gate_copy }
+allNodes.Add
+    (Cobit_BA,
+     { Name = "cobit_BA"
+       Inputs = [ port Quantum Bob ]
+       Outputs = [ port Quantum Bob; port Quantum Alice ]
+       Gate = gate_copy })
 
-let CopyCbit =
-    { Name = "cbit"
-      Inputs = [ port Classical Any ]
-      Outputs =
-          [ port Classical Any
-            port Classical Any ]
-      Gate = gate_copy }
+allNodes.Add
+    (CopyCbit,
+     { Name = "cbit"
+       Inputs = [ port Classical Any ]
+       Outputs =
+           [ port Classical Any
+             port Classical Any ]
+       Gate = gate_copy })
 
 
 let gate_not: Gate =
@@ -149,17 +213,19 @@ let gate_not: Gate =
     | [ in1 ], [ out1 ] -> map (modifyBit in1 (fun val1 -> B [ out1, not val1 ]))
     | _ -> failwith "wires not correct"
 
-let X =
-    { Name = "X"
-      Inputs = [ port Quantum Any ]
-      Outputs = [ port Quantum Any ]
-      Gate = gate_not }
+allNodes.Add
+    (X,
+     { Name = "X"
+       Inputs = [ port Quantum Any ]
+       Outputs = [ port Quantum Any ]
+       Gate = gate_not })
 
-let Not =
-    { Name = "Not"
-      Inputs = [ port Classical Any ]
-      Outputs = [ port Classical Any ]
-      Gate = gate_not }
+allNodes.Add
+    (Not,
+     { Name = "Not"
+       Inputs = [ port Classical Any ]
+       Outputs = [ port Classical Any ]
+       Gate = gate_not })
 
 
 let gate_Z: Gate =
@@ -167,11 +233,12 @@ let gate_Z: Gate =
     | [ in1 ], [ out1 ] -> unitary1 in1 (fun val1 -> Ket [ out1, val1 ] * (if val1 then -1.0 else 1.0))
     | _ -> failwith "wires not correct"
 
-let Z =
-    { Name = "Z"
-      Inputs = [ port Quantum Any ]
-      Outputs = [ port Quantum Any ]
-      Gate = gate_Z }
+allNodes.Add
+    (Z,
+     { Name = "Z"
+       Inputs = [ port Quantum Any ]
+       Outputs = [ port Quantum Any ]
+       Gate = gate_Z })
 
 
 let gate_H: Gate =
@@ -184,11 +251,12 @@ let gate_H: Gate =
             / sqrt 2.0)
     | _ -> failwith "wires not correct"
 
-let H =
-    { Name = "H"
-      Inputs = [ port Quantum Any ]
-      Outputs = [ port Quantum Any ]
-      Gate = gate_H }
+allNodes.Add
+    (H,
+     { Name = "H"
+       Inputs = [ port Quantum Any ]
+       Outputs = [ port Quantum Any ]
+       Gate = gate_H })
 
 
 let gate_CNOT: Gate =
@@ -200,29 +268,33 @@ let gate_CNOT: Gate =
                      out2, (if val1 then not val2 else val2) ]))
     | _ -> failwith "wires not correct"
 
-let CNOT =
-    { Name = "CNOT"
-      Inputs = [ port Quantum Any; port Quantum Any ]
-      Outputs = [ port Quantum Any; port Quantum Any ]
-      Gate = gate_CNOT }
+allNodes.Add
+    (CNOT,
+     { Name = "CNOT"
+       Inputs = [ port Quantum Any; port Quantum Any ]
+       Outputs = [ port Quantum Any; port Quantum Any ]
+       Gate = gate_CNOT })
 
-let CNOT_AB =
-    { Name = "CNOT_AB"
-      Inputs = [ port Quantum Alice; port Quantum Bob ]
-      Outputs = [ port Quantum Alice; port Quantum Bob ]
-      Gate = gate_CNOT }
+allNodes.Add
+    (CNOT_AB,
+     { Name = "CNOT_AB"
+       Inputs = [ port Quantum Alice; port Quantum Bob ]
+       Outputs = [ port Quantum Alice; port Quantum Bob ]
+       Gate = gate_CNOT })
 
-let CNOT_BA =
-    { Name = "CNOT_BA"
-      Inputs = [ port Quantum Bob; port Quantum Alice ]
-      Outputs = [ port Quantum Bob; port Quantum Alice ]
-      Gate = gate_CNOT }
+allNodes.Add
+    (CNOT_BA,
+     { Name = "CNOT_BA"
+       Inputs = [ port Quantum Bob; port Quantum Alice ]
+       Outputs = [ port Quantum Bob; port Quantum Alice ]
+       Gate = gate_CNOT })
 
-let Controlled_X =
-    { Name = "Controlled X"
-      Inputs = [ port Classical Any; port Quantum Any ]
-      Outputs = [ port Classical Any; port Quantum Any ]
-      Gate = gate_CNOT }
+allNodes.Add
+    (Controlled_X,
+     { Name = "Controlled X"
+       Inputs = [ port Classical Any; port Quantum Any ]
+       Outputs = [ port Classical Any; port Quantum Any ]
+       Gate = gate_CNOT })
 
 
 let gate_CZ: Gate =
@@ -233,29 +305,33 @@ let gate_CZ: Gate =
             * (if val1 && val2 then -1.0 else 1.0))
     | _ -> failwith "wires not correct"
 
-let CZ =
-    { Name = "CZ"
-      Inputs = [ port Quantum Any; port Quantum Any ]
-      Outputs = [ port Quantum Any; port Quantum Any ]
-      Gate = gate_CZ }
+allNodes.Add
+    (CZ,
+     { Name = "CZ"
+       Inputs = [ port Quantum Any; port Quantum Any ]
+       Outputs = [ port Quantum Any; port Quantum Any ]
+       Gate = gate_CZ })
 
-let CZ_AB =
-    { Name = "CZ_AB"
-      Inputs = [ port Quantum Alice; port Quantum Bob ]
-      Outputs = [ port Quantum Alice; port Quantum Bob ]
-      Gate = gate_CZ }
+allNodes.Add
+    (CZ_AB,
+     { Name = "CZ_AB"
+       Inputs = [ port Quantum Alice; port Quantum Bob ]
+       Outputs = [ port Quantum Alice; port Quantum Bob ]
+       Gate = gate_CZ })
 
-let CZ_BA =
-    { Name = "CZ_BA"
-      Inputs = [ port Quantum Bob; port Quantum Alice ]
-      Outputs = [ port Quantum Bob; port Quantum Alice ]
-      Gate = gate_CZ }
+allNodes.Add
+    (CZ_BA,
+     { Name = "CZ_BA"
+       Inputs = [ port Quantum Bob; port Quantum Alice ]
+       Outputs = [ port Quantum Bob; port Quantum Alice ]
+       Gate = gate_CZ })
 
-let Controlled_Z =
-    { Name = "Controlled Z"
-      Inputs = [ port Classical Any; port Quantum Any ]
-      Outputs = [ port Classical Any; port Quantum Any ]
-      Gate = gate_CZ }
+allNodes.Add
+    (Controlled_Z,
+     { Name = "Controlled Z"
+       Inputs = [ port Classical Any; port Quantum Any ]
+       Outputs = [ port Classical Any; port Quantum Any ]
+       Gate = gate_CZ })
 
 
 let gate_SWAP: Gate =
@@ -263,11 +339,12 @@ let gate_SWAP: Gate =
     | [ in1; in2 ], [ out1; out2 ] -> map (modifyBits [ in1; in2 ] (fun [ val1; val2 ] -> B [ out1, val2; out2, val1 ]))
     | _ -> failwith "wires not correct"
 
-let SWAP =
-    { Name = "SWAP"
-      Inputs = [ port Quantum Alice; port Quantum Bob ]
-      Outputs = [ port Quantum Alice; port Quantum Bob ]
-      Gate = gate_SWAP }
+allNodes.Add
+    (SWAP,
+     { Name = "SWAP"
+       Inputs = [ port Quantum Alice; port Quantum Bob ]
+       Outputs = [ port Quantum Alice; port Quantum Bob ]
+       Gate = gate_SWAP })
 
 
 let gate_ebit: Gate =
@@ -279,11 +356,12 @@ let gate_ebit: Gate =
             / sqrt 2.0)
     | _ -> failwith "wires not correct"
 
-let ebit =
-    { Name = "ebit"
-      Inputs = []
-      Outputs = [ port Quantum Alice; port Quantum Bob ]
-      Gate = gate_ebit }
+allNodes.Add
+    (Ebit,
+     { Name = "ebit"
+       Inputs = []
+       Outputs = [ port Quantum Alice; port Quantum Bob ]
+       Gate = gate_ebit })
 
 
 let gate_M: Gate =
@@ -293,11 +371,12 @@ let gate_M: Gate =
         >> map (copyBits in1 [ out1 ])
     | _ -> failwith "wires not correct"
 
-let M =
-    { Name = "M"
-      Inputs = [ port Quantum Any ]
-      Outputs = [ port Classical Any ]
-      Gate = gate_M }
+allNodes.Add
+    (M,
+     { Name = "M"
+       Inputs = [ port Quantum Any ]
+       Outputs = [ port Classical Any ]
+       Gate = gate_M })
 
 
 let gate_InitBit: Gate =
@@ -305,17 +384,19 @@ let gate_InitBit: Gate =
     | [], [ out1 ] -> map (merge (B [ out1, false ]))
     | _ -> failwith "wires not correct"
 
-let InitCbit =
-    { Name = "False"
-      Inputs = []
-      Outputs = [ port Classical Any ]
-      Gate = gate_InitBit }
+allNodes.Add
+    (InitCbit,
+     { Name = "False"
+       Inputs = []
+       Outputs = [ port Classical Any ]
+       Gate = gate_InitBit })
 
-let InitQubit =
-    { Name = "|0⟩"
-      Inputs = []
-      Outputs = [ port Quantum Any ]
-      Gate = gate_InitBit }
+allNodes.Add
+    (InitQubit,
+     { Name = "|0⟩"
+       Inputs = []
+       Outputs = [ port Quantum Any ]
+       Gate = gate_InitBit })
 
 
 let gate_InitBitRandom: Gate =
@@ -326,17 +407,19 @@ let gate_InitBitRandom: Gate =
                                   (merge b1 (B [ out1, true ]), merge b2 (B [ out1, true ])), 0.5 ])
     | _ -> failwith "wires not correct"
 
-let InitCbitRandom =
-    { Name = "Init Random Cbit"
-      Inputs = []
-      Outputs = [ port Classical Any ]
-      Gate = gate_InitBitRandom }
+allNodes.Add
+    (InitCbitRandom,
+     { Name = "Init Random Cbit"
+       Inputs = []
+       Outputs = [ port Classical Any ]
+       Gate = gate_InitBitRandom })
 
-let InitQubitRandom =
-    { Name = "Init Random Qubit"
-      Inputs = []
-      Outputs = [ port Quantum Any ]
-      Gate = gate_InitBitRandom }
+allNodes.Add
+    (InitQubitRandom,
+     { Name = "Init Random Qubit"
+       Inputs = []
+       Outputs = [ port Quantum Any ]
+       Gate = gate_InitBitRandom })
 
 
 let gate_DestroyBit: Gate =
@@ -346,14 +429,16 @@ let gate_DestroyBit: Gate =
         >> map (removeAll [ in1 ])
     | _ -> failwith "wires not correct"
 
-let DestroyCbit =
-    { Name = "Forget"
-      Inputs = [ port Classical Any ]
-      Outputs = []
-      Gate = gate_DestroyBit }
+allNodes.Add
+    (DestroyCbit,
+     { Name = "Forget"
+       Inputs = [ port Classical Any ]
+       Outputs = []
+       Gate = gate_DestroyBit })
 
-let DestroyQubit =
-    { Name = "Forget"
-      Inputs = [ port Quantum Any ]
-      Outputs = []
-      Gate = gate_DestroyBit }
+allNodes.Add
+    (DestroyQubit,
+     { Name = "Forget"
+       Inputs = [ port Quantum Any ]
+       Outputs = []
+       Gate = gate_DestroyBit })

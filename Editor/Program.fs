@@ -164,11 +164,11 @@ let private viewNodeDefinition container
                                =
     div [ Class "node"
           Ref(fun element -> if isNull element then container () |> Container.refreshScreen) ] [
-        div [ Class "portstack" ] (node.Inputs |> idx |> Seq.map viewInputPort)
+        div [ Class "portstack" ] ((info node).Inputs |> idx |> Seq.map viewInputPort)
         div [ Class "nodetitle" ] [
-            str node.Name
+            str (info node).Name
         ]
-        div [ Class "portstack" ] (node.Outputs |> idx |> Seq.map viewOutputPort)
+        div [ Class "portstack" ] ((info node).Outputs |> idx |> Seq.map viewOutputPort)
     ]
 
 let private viewNode dispatch (board: Board) container nodeId =
@@ -246,8 +246,8 @@ let private viewPaletteNode dispatch (node, available) =
                         true) ] [
             viewNodeDefinition
                 (fun () -> Container.empty)
-                (fun i -> viewPort [] node.Inputs.[i])
-                (fun i -> viewPort [] node.Outputs.[i])
+                (fun i -> viewPort [] (info node).Inputs.[i])
+                (fun i -> viewPort [] (info node).Outputs.[i])
                 node
         ]
     ]
