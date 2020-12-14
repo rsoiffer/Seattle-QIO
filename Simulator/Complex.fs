@@ -7,11 +7,14 @@ open System
 open System.Globalization
 
 /// Complex number in cartesian form
-[<Struct>]
-[<CustomEquality; CustomComparison>]
-type Complex(real: float, imaginary: float) =
-    member x.r = real
-    member x.i = imaginary
+type Complex =
+    { Real: float
+      Imaginary: float }
+
+    member x.r = x.Real
+
+    member x.i = x.Imaginary
+
     override x.ToString() = x.ToString("g")
 
     member x.ToString(fmt) =
@@ -24,32 +27,13 @@ type Complex(real: float, imaginary: float) =
         + (Math.Abs x.i).ToString(fmt, fmtprovider)
         + "i"
 
-    interface IComparable with
-        member x.CompareTo(obj) =
-            match obj with
-            | :? Complex as y ->
-                let c = compare x.r y.r
-                if c <> 0 then c else compare x.i y.i
-            | _ -> invalidArg "obj" "not a Complex number"
-
-    override x.Equals(obj) =
-        match obj with
-        | :? Complex as y -> x.r = y.r && x.i = y.i
-        | _ -> false
-
-    override x.GetHashCode() =
-        (hash x.r >>> 5)
-        ^^^ (hash x.r <<< 3)
-            ^^^ (((hash x.i >>> 4) ^^^ (hash x.i <<< 4))
-                 + 0x9e3779b9)
-
 /// Complex number
 type complex = Complex
 
 /// Operations for complex number in cartesian form
 module Complex =
     /// Creates a complex number of a real part a and an imaginary part b
-    let mkRect (a, b) = Complex(a, b)
+    let mkRect (a, b) = { Real = a; Imaginary = b }
 
     /// Conjugates a complex number (reverses sign of imaginary part)
     let conjugate (c: complex) = mkRect (c.r, -c.i)

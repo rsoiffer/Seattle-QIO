@@ -21,7 +21,7 @@ module SparseVector =
 
     let ofSeqF s =
         s
-        |> Seq.map (fun (k, v) -> k, Complex(v, 0.0))
+        |> Seq.map (fun (k, v) -> k, Complex.mkRect (v, 0.0))
         |> ofSeq
 
     let mapBoth (f: _ -> _) = toSeq >> Seq.map f >> ofSeq
@@ -79,9 +79,9 @@ type SparseVector<'c when 'c: comparison> with
 
     static member (*)(mult: Complex, s: SparseVector<'a>) = s * mult
 
-    static member (*)(s: SparseVector<'a>, mult: float) = mul (Complex(mult, 0.0)) s
+    static member (*)(s: SparseVector<'a>, mult: float) = mul (Complex.mkRect (mult, 0.0)) s
 
-    static member (*)(mult: float, s: SparseVector<'a>) = mul (Complex(mult, 0.0)) s
+    static member (*)(mult: float, s: SparseVector<'a>) = mul (Complex.mkRect (mult, 0.0)) s
 
     static member (/)(s: SparseVector<'a>, mult: float) = s * (1.0 / mult)
 

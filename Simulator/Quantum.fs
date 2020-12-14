@@ -46,7 +46,7 @@ let adjoint rho =
 let norm psi =
     psi
     |> SparseVector.mapBoth (fun (k, v) -> v, Complex.one)
-    |> SparseVector.sumBy (fun v -> Complex(v.Magnitude ** 2.0, 0.0))
+    |> SparseVector.sumBy (fun v -> Complex.mkRect (v.Magnitude ** 2.0, 0.0))
 
 let trace rho =
     rho

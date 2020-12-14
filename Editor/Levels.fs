@@ -25,13 +25,13 @@ let randomPureState wireIds =
 
     let r =
         allBits
-        |> List.map (fun _ -> Complex(myRandom.NextDouble(), myRandom.NextDouble()))
+        |> List.map (fun _ -> Complex.mkRect (myRandom.NextDouble(), myRandom.NextDouble()))
 
     let norm =
         r |> List.sumBy (fun a -> a.Magnitude ** 2.0)
 
     r
-    |> List.map (fun a -> a / Complex(sqrt norm, 0.0))
+    |> List.map (fun a -> a / Complex.mkRect (sqrt norm, 0.0))
     |> List.zip allBits
     |> SparseVector.ofSeq
 
