@@ -170,13 +170,20 @@ let private viewNodeDefinition container
                                (viewOutputPort: int -> ReactElement)
                                (node: NodeDefinition)
                                =
+    let name =
+        (info node).Name.Split '_'
+        |> Seq.map str
+        |> Seq.reduceBack (fun text subscript -> span [] [ text; sub [] [ subscript ] ])
+
     div [ Class "node"
           Ref(fun element -> if isNull element then container () |> Container.refreshScreen) ] [
         div [ Class "portstack" ] ((info node).Inputs |> idx |> Seq.map viewInputPort)
-        div [ Class "nodetitle" ] [
-            str (info node).Name
-        ]
-        div [ Class "portstack" ] ((info node).Outputs |> idx |> Seq.map viewOutputPort)
+        div [ Class "nodetitle" ] [ name ]
+        div
+            [ Class "portstack" ]
+            ((info node).Outputs
+             |> idx
+             |> Seq.map viewOutputPort)
     ]
 
 let private viewNode dispatch (board: Board) container nodeId =
