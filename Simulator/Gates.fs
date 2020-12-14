@@ -138,14 +138,14 @@ allNodes.Add
 
 allNodes.Add
     (Cbit_AB,
-     { Name = "cbit_AB"
+     { Name = "cbit_A→B"
        Inputs = [ port Classical Alice ]
        Outputs = [ port Classical Bob ]
        Gate = gate_move })
 
 allNodes.Add
     (Cbit_BA,
-     { Name = "cbit_BA"
+     { Name = "cbit_B→A"
        Inputs = [ port Classical Bob ]
        Outputs = [ port Classical Alice ]
        Gate = gate_move })
@@ -159,14 +159,14 @@ allNodes.Add
 
 allNodes.Add
     (Qbit_AB,
-     { Name = "qbit_AB"
+     { Name = "qbit_A→B"
        Inputs = [ port Quantum Alice ]
        Outputs = [ port Quantum Bob ]
        Gate = gate_move })
 
 allNodes.Add
     (Qbit_BA,
-     { Name = "qbit_BA"
+     { Name = "qbit_B→A"
        Inputs = [ port Quantum Bob ]
        Outputs = [ port Quantum Alice ]
        Gate = gate_move })
@@ -186,14 +186,14 @@ allNodes.Add
 
 allNodes.Add
     (Cobit_AB,
-     { Name = "cobit_AB"
+     { Name = "cobit_A→B"
        Inputs = [ port Quantum Alice ]
        Outputs = [ port Quantum Alice; port Quantum Bob ]
        Gate = gate_copy })
 
 allNodes.Add
     (Cobit_BA,
-     { Name = "cobit_BA"
+     { Name = "cobit_B→A"
        Inputs = [ port Quantum Bob ]
        Outputs = [ port Quantum Bob; port Quantum Alice ]
        Gate = gate_copy })
@@ -277,14 +277,14 @@ allNodes.Add
 
 allNodes.Add
     (CNOT_AB,
-     { Name = "CNOT_AB"
+     { Name = "CNOT_A→B"
        Inputs = [ port Quantum Alice; port Quantum Bob ]
        Outputs = [ port Quantum Alice; port Quantum Bob ]
        Gate = gate_CNOT })
 
 allNodes.Add
     (CNOT_BA,
-     { Name = "CNOT_BA"
+     { Name = "CNOT_B→A"
        Inputs = [ port Quantum Bob; port Quantum Alice ]
        Outputs = [ port Quantum Bob; port Quantum Alice ]
        Gate = gate_CNOT })
@@ -314,14 +314,14 @@ allNodes.Add
 
 allNodes.Add
     (CZ_AB,
-     { Name = "CZ_AB"
+     { Name = "CZ_A→B"
        Inputs = [ port Quantum Alice; port Quantum Bob ]
        Outputs = [ port Quantum Alice; port Quantum Bob ]
        Gate = gate_CZ })
 
 allNodes.Add
     (CZ_BA,
-     { Name = "CZ_BA"
+     { Name = "CZ_B→A"
        Inputs = [ port Quantum Bob; port Quantum Alice ]
        Outputs = [ port Quantum Bob; port Quantum Alice ]
        Gate = gate_CZ })
