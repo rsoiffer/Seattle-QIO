@@ -195,12 +195,12 @@ allNodes.Add
     (Cobit_BA,
      { Name = "cobit_B→A"
        Inputs = [ port Quantum Bob ]
-       Outputs = [ port Quantum Bob; port Quantum Alice ]
+       Outputs = [ port Quantum Alice; port Quantum Bob ]
        Gate = gate_copy })
 
 allNodes.Add
     (CopyCbit,
-     { Name = "cbit"
+     { Name = "Copy"
        Inputs = [ port Classical Any ]
        Outputs =
            [ port Classical Any

@@ -188,7 +188,7 @@ let challenge_a1q1_a =
             M
             Controlled_X
             Controlled_Z
-            DestroyCbit ]
+            CopyCbit ]
       Costly = [ Ebit, 1; Cbit_AB, 1; Cbit_BA, 1 ]
       Goals = [ CNOT_AB ] }
 
