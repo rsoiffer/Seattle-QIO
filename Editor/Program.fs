@@ -94,17 +94,20 @@ let private wireRelation inferredType targetId =
             | Some Any -> Some "black"
             | Some Alice -> Some "red"
             | Some Bob -> Some "blue"
-            | None -> Some "pink"
-        | None -> Some "pink"
+            | None -> Some "purple"
+        | None -> Some "purple"
 
     let dasharray =
         match inferredType with
         | Some it ->
-            match it.InferredDataType with
-            | Some Classical -> Some "5,5"
-            | Some Quantum -> None
-            | None -> Some "1,5"
-        | None -> Some "1,5"
+            match it.InferredParty with
+            | None -> Some "2,4"
+            | _ ->
+                match it.InferredDataType with
+                | Some Classical -> Some "5,5"
+                | Some Quantum -> None
+                | None -> Some "2,4"
+        | None -> Some "2,4"
 
     { targetId = targetId
       targetAnchor = Left
@@ -394,7 +397,10 @@ let private update message model =
         { model with
               Level =
                   { level with
-                        Board = level.Board |> Board.randomizeNodeIds |> Board.inferTypes }
+                        Board =
+                            level.Board
+                            |> Board.randomizeNodeIds
+                            |> Board.inferTypes }
               Evaluation = None }
     | AddNode (node, position) ->
         let board =
@@ -426,7 +432,9 @@ let private update message model =
                 |> Board.randomizeNodeIds
 
             { model with
-                  Level = { model.Level with Board = board |> Board.inferTypes } }
+                  Level =
+                      { model.Level with
+                            Board = board |> Board.inferTypes } }
     | StartWire creation ->
         let board =
             { model.Level.Board with
@@ -446,7 +454,9 @@ let private update message model =
                     |> Board.addWire outputId inputId
 
                 { model with
-                      Level = { model.Level with Board = board |> Board.inferTypes } }
+                      Level =
+                          { model.Level with
+                                Board = board |> Board.inferTypes } }
         | _ -> model
     | Evaluate ->
         let evaluation =
