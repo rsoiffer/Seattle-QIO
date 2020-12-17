@@ -394,7 +394,7 @@ let private update message model =
         { model with
               Level =
                   { level with
-                        Board = level.Board |> Board.randomizeNodeIds }
+                        Board = level.Board |> Board.randomizeNodeIds |> Board.inferTypes }
               Evaluation = None }
     | AddNode (node, position) ->
         let board =
@@ -426,7 +426,7 @@ let private update message model =
                 |> Board.randomizeNodeIds
 
             { model with
-                  Level = { model.Level with Board = board } }
+                  Level = { model.Level with Board = board |> Board.inferTypes } }
     | StartWire creation ->
         let board =
             { model.Level.Board with
@@ -446,7 +446,7 @@ let private update message model =
                     |> Board.addWire outputId inputId
 
                 { model with
-                      Level = { model.Level with Board = board } }
+                      Level = { model.Level with Board = board |> Board.inferTypes } }
         | _ -> model
     | Evaluate ->
         let evaluation =

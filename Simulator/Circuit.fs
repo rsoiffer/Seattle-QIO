@@ -12,6 +12,12 @@ type NodeInputId = { NodeId: NodeId; InputPort: int }
 type NodeIOId =
     | NodeInputId of NodeInputId
     | NodeOutputId of NodeOutputId
+    
+module NodeIOId =
+    let nodeId =
+        function
+        | NodeInputId input -> input.NodeId
+        | NodeOutputId output -> output.NodeId
 
 type WirePlacement =
     { Left: NodeOutputId

@@ -57,8 +57,7 @@ module internal Board =
         let wires =
             board.Wires
             |> Map.filter (fun _ wire ->
-                wire.Placement.Left.NodeId
-                <> nodeId
+                wire.Placement.Left.NodeId <> nodeId
                 && wire.Placement.Right.NodeId <> nodeId)
 
         { board with
@@ -112,8 +111,12 @@ module internal Board =
 
     let port nodeIoId board =
         match nodeIoId with
-        | NodeInputId nodeInputId -> (info board.Nodes.[nodeInputId.NodeId].Definition).Inputs.[nodeInputId.InputPort]
-        | NodeOutputId nodeInputId -> (info board.Nodes.[nodeInputId.NodeId].Definition).Outputs.[nodeInputId.OutputPort]
+        | NodeInputId nodeInputId ->
+            (info board.Nodes.[nodeInputId.NodeId].Definition)
+                .Inputs.[nodeInputId.InputPort]
+        | NodeOutputId nodeInputId ->
+            (info board.Nodes.[nodeInputId.NodeId].Definition)
+                .Outputs.[nodeInputId.OutputPort]
 
     let count definition board =
         board.Nodes
@@ -138,18 +141,107 @@ module internal Board =
               Wires =
                   board.Wires
                   |> Map.filter (fun _ wire ->
-                      wire.Placement.Left
-                      <> left
+                      wire.Placement.Left <> left
                       && wire.Placement.Right <> right)
                   |> Map.add wireId wire }
 
     let canAddWire (left: NodeOutputId) (right: NodeInputId) (board: Board) =
         let leftPort = port (NodeOutputId left) board
         let rightPort = port (NodeInputId right) board
+
         leftPort.DataType = rightPort.DataType
         && (leftPort.Party = Any
             || rightPort.Party = Any
             || leftPort.Party = rightPort.Party)
 
-    // TODO - this method should infer types for all the node inputs/outputs and wires
-    let inferTypes board: Board = board
+    let inferTypes board =
+        let allNodeIOIds nodeId =
+            let info = info board.Nodes.[nodeId].Definition
+
+            (info.Inputs
+             |> List.mapi (fun portId port -> NodeInputId { NodeId = nodeId; InputPort = portId }, port))
+            @ (info.Outputs
+               |> List.mapi (fun portId port -> NodeOutputId { NodeId = nodeId; OutputPort = portId }, port))
+
+        let reachableNodeIOIds nodeIOId =
+            if (port nodeIOId board).Party = Any then
+                NodeIOId.nodeId nodeIOId
+                |> allNodeIOIds
+                |> Seq.filter (fun (_, port) -> port.Party = Any)
+                |> Seq.map fst
+                |> Seq.filter ((<>) nodeIOId)
+            else
+                Seq.empty
+
+        let connectedWires nodeIOId =
+            board.Wires
+            |> Map.toSeq
+            |> Seq.map snd
+            |> Seq.filter (fun wire ->
+                match nodeIOId with
+                | NodeInputId input -> input = wire.Placement.Right
+                | NodeOutputId output -> output = wire.Placement.Left)
+
+        let neighbors wire =
+            [ NodeOutputId wire.Placement.Left
+              NodeInputId wire.Placement.Right ]
+            |> Seq.collect reachableNodeIOIds
+            |> Seq.collect connectedWires
+            |> Set.ofSeq
+
+        let rec ``find the components and stuff`` (visited: Wire Set) (wire: Wire): Wire Set =
+            Set.difference (neighbors wire) visited
+            |> Set.fold (fun component' neighbor ->
+                ``find the components and stuff`` (Set.union visited component') neighbor
+                |> Set.union component') (Set.singleton wire)
+
+        { board with
+              Wires =
+                  board.Wires
+                  |> Map.map (fun _ wire ->
+                      let component' =
+                          ``find the components and stuff`` Set.empty wire
+
+                      let hasAlice =
+                          component'
+                          |> Set.exists (fun wire ->
+                              (port (NodeOutputId wire.Placement.Left) board)
+                                  .Party = Alice
+                              || (port (NodeInputId wire.Placement.Right) board)
+                                  .Party = Alice)
+
+                      let hasBob =
+                          component'
+                          |> Set.exists (fun wire ->
+                              (port (NodeOutputId wire.Placement.Left) board)
+                                  .Party = Bob
+                              || (port (NodeInputId wire.Placement.Right) board)
+                                  .Party = Bob)
+
+                      { wire with
+                            InferredType =
+                                match hasAlice, hasBob with
+                                | true, false ->
+                                    Some
+                                        { InferredDataType =
+                                              wire.InferredType
+                                              |> Option.bind (fun inferred -> inferred.InferredDataType)
+                                          InferredParty = Some Alice }
+                                | false, true ->
+                                    Some
+                                        { InferredDataType =
+                                              wire.InferredType
+                                              |> Option.bind (fun inferred -> inferred.InferredDataType)
+                                          InferredParty = Some Bob }
+                                | false, false ->
+                                    Some
+                                        { InferredDataType =
+                                              wire.InferredType
+                                              |> Option.bind (fun inferred -> inferred.InferredDataType)
+                                          InferredParty = Some Any }
+                                | true, true ->
+                                    Some
+                                        { InferredDataType =
+                                              wire.InferredType
+                                              |> Option.bind (fun inferred -> inferred.InferredDataType)
+                                          InferredParty = None } }) }
